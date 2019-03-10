@@ -1,0 +1,41 @@
+html, body {
+    margin: 0;
+    padding: 0;
+}
+
+.chart {
+    width: 100%;
+}
+
+.chart svg {
+    overflow: hidden;
+}
+
+.chart__offset-wrapper {
+    height: 50px;
+    position: relative;
+}
+
+.chart__offset-main-drag {
+    position: absolute;
+    left: 0;
+    top: 0;
+    min-width: 30px;
+    height: 100%;
+}
+
+.chart__offset-left-drag, .chart__offset-right-drag {
+    position: absolute;
+    width: 5px;
+    background-color: rgba(0, 0, 0, 0.1);
+    height: 100%;
+    top: 0;
+}
+
+.chart__offset-left-drag {
+    left: 0;
+}
+
+.chart__offset-right-drag {
+    right: 0;
+}
