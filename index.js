@@ -129,7 +129,6 @@ class TelegramChart {
     let rightDragging = -1;
 
     document.addEventListener('mousedown', e => {
-      console.log('document mousedown', e);
       if (e.target === mainDrag) {
         e.stopPropagation();
         mainDragging = e.clientX - this.offsetLeft * this.dimensions.width;
@@ -142,7 +141,6 @@ class TelegramChart {
       }
     });
     document.addEventListener('mouseup', e => {
-      console.log('document mouseup', e);
       mainDragging = -1;
       leftDragging = -1;
       rightDragging = -1;

@@ -29,12 +29,14 @@ html, body {
     height: 100%;
     stroke: rgba(0, 0, 0, 0.6);
     stroke-width: 1px;
+    cursor: grab;
 }
 
 .chart__offset-drag {
     width: 5px;
     height: 100%;
     fill: rgba(0, 0, 0, 0.6);
+    cursor: grab;
 }
 
 .chart__offset-spacer {
