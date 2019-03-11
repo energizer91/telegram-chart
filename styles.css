@@ -17,22 +17,26 @@ html, body {
     width: 100%;
 }
 
+.chart__viewport path {
+    /*transition: d 0.1s;*/
+}
+
 .chart__offset-main-drag, .chart__offset-spacer {
     height: 100%;
 }
 
-.chart__offset-left-drag, .chart__offset-right-drag {
-    position: absolute;
-    width: 5px;
-    background-color: rgba(0, 0, 0, 0.1);
+.chart__offset-main-drag {
     height: 100%;
-    top: 0;
+    stroke: rgba(0, 0, 0, 0.6);
+    stroke-width: 1px;
 }
 
-.chart__offset-left-drag {
-    left: 0;
+.chart__offset-drag {
+    width: 5px;
+    height: 100%;
+    fill: rgba(0, 0, 0, 0.6);
 }
 
-.chart__offset-right-drag {
-    right: 0;
+.chart__offset-spacer {
+    fill: rgba(0, 0, 0, 0.4);
 }
