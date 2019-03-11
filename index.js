@@ -14,8 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 const svgNS = 'http://www.w3.org/2000/svg';
-const findMaximum = array => array.reduce((acc, item) => item >= acc ? item : acc, 0);
-const findMinimum = array => array.reduce((acc, item) => item <= acc ? item : acc, 0);
+const findMaximum = array => array.reduce((acc, item) => item >= acc ? item : acc, -Infinity);
+const findMinimum = array => array.reduce((acc, item) => item <= acc ? item : acc, Infinity);
 
 class TelegramChart {
   constructor(selector, data = {}, params = {}) {
@@ -48,8 +48,8 @@ class TelegramChart {
 
     this.createLinesViewport();
 
-    this.offsetLeft = 50;
-    this.offsetRight = this.xAxis.length - 20;
+    this.offsetLeft = 0;
+    this.offsetRight = 0.7;
     this.maximum = 0;
     this.minimum = 0;
 
@@ -61,6 +61,7 @@ class TelegramChart {
     this.createOffsetWrapper();
 
     this.render();
+    console.log(this);
   }
 
   createViewport() {
@@ -79,22 +80,38 @@ class TelegramChart {
   }
 
   createOffsetWrapper() {
-    this.offsetWrapper = document.createElement('div');
+    this.offsetWrapper = document.createElementNS(svgNS, 'svg');
     this.offsetWrapper.classList.add('chart__offset-wrapper');
 
     this.container.appendChild(this.offsetWrapper);
 
-    const mainDrag = document.createElement('div');
+    const mainDrag = document.createElementNS(svgNS, 'rect');
     mainDrag.classList.add('chart__offset-main-drag');
+    mainDrag.setAttribute('fill', 'transparent');
     this.offsetWrapper.appendChild(mainDrag);
 
-    const leftDrag = document.createElement('div');
+    const leftDrag = document.createElementNS(svgNS, 'rect');
     leftDrag.classList.add('chart__offset-left-drag');
-    mainDrag.appendChild(leftDrag);
+    leftDrag.setAttribute('fill', 'rgba(0, 0, 0, 0.6)');
+    this.offsetWrapper.appendChild(leftDrag);
 
-    const rightDrag = document.createElement('div');
+    const rightDrag = document.createElementNS(svgNS, 'rect');
     rightDrag.classList.add('chart__offset-right-drag');
-    mainDrag.appendChild(rightDrag);
+    rightDrag.setAttribute('fill', 'rgba(0, 0, 0, 0.6)');
+    this.offsetWrapper.appendChild(rightDrag);
+
+    const leftSpacer = document.createElementNS(svgNS, 'rect');
+    leftSpacer.classList.add('chart__offset-spacer');
+    leftSpacer.classList.add('chart__offset-spacer_left');
+    leftSpacer.setAttribute('fill', 'rgba(0, 0, 0, 0.4)');
+    leftSpacer.setAttribute('x', '0');
+    this.offsetWrapper.appendChild(leftSpacer);
+
+    const rightSpacer = document.createElementNS(svgNS, 'rect');
+    rightSpacer.classList.add('chart__offset-spacer');
+    rightSpacer.classList.add('chart__offset-spacer_right');
+    rightSpacer.setAttribute('fill', 'rgba(0, 0, 0, 0.4)');
+    this.offsetWrapper.appendChild(rightSpacer);
 
     let mainDragging = -1;
     let leftDragging = -1;
@@ -104,7 +121,8 @@ class TelegramChart {
       console.log('document mousedown', e);
       if (e.target === mainDrag) {
         e.stopPropagation();
-        mainDragging = e.clientX;
+        mainDragging = e.clientX - this.offsetLeft * this.dimensions.width;
+        console.log('mainDragging', mainDragging);
         return;
       }
       if (e.target === leftDrag) {
@@ -126,23 +144,26 @@ class TelegramChart {
 
     document.addEventListener('mousemove', e => {
       if (mainDragging >= 0) {
-        console.log('mainDrag mousemove', e);
         e.stopPropagation();
-        let newPosition = e.clientX - mainDrag.offsetWidth / 2;
+        let newLeft = e.clientX - mainDragging;
+        let newRight = newLeft + Number(mainDrag.getAttribute('width'));
+        console.log(newLeft, newRight);
 
-        if (newPosition < 0) {
-          newPosition = 0;
+        if (newLeft < 0) {
+          // TODO: Fix jumping
+          newRight = e.clientX + mainDragging;
+          newLeft = 0;
         }
 
-        if (newPosition > this.dimensions.width - mainDrag.offsetWidth) {
-          newPosition = this.dimensions.width - mainDrag.offsetWidth;
+        if (newRight > this.dimensions.width) {
+          newRight = this.dimensions.width;
         }
 
-        mainDrag.style.left = newPosition + 'px';
-        return;
-      }
-      if (leftDragging >= 0) {
-        console.log('leftDrag mousemove', e);
+        this.offsetLeft = newLeft / this.dimensions.width;
+        this.offsetRight = newRight / this.dimensions.width;
+
+        this.render();
+      } else if (leftDragging >= 0) {
         e.stopPropagation();
         let newPosition = e.clientX - leftDrag.offsetWidth / 2;
 
@@ -154,7 +175,7 @@ class TelegramChart {
           newPosition = this.dimensions.width - leftDrag.offsetWidth;
         }
 
-        const newOffsetLeft = Math.round(newPosition / this.dimensions.width * this.xAxis.length);
+        const newOffsetLeft = newPosition / this.dimensions.width;
 
         if (newOffsetLeft === this.offsetLeft) {
           return;
@@ -163,10 +184,7 @@ class TelegramChart {
         this.offsetLeft = newOffsetLeft;
 
         this.render();
-        return;
-      }
-      if (rightDragging >= 0) {
-        console.log('rightDrag mousemove', e);
+      } else if (rightDragging >= 0) {
         e.stopPropagation();
         let newPosition = e.clientX - rightDrag.offsetWidth / 2;
 
@@ -178,7 +196,7 @@ class TelegramChart {
           newPosition = this.dimensions.width - rightDrag.offsetWidth;
         }
 
-        const newOffsetRight = Math.round(newPosition / this.dimensions.width * this.xAxis.length);
+        const newOffsetRight = newPosition / this.dimensions.width;
 
         if (newOffsetRight === this.offsetRight) {
           return;
@@ -198,19 +216,38 @@ class TelegramChart {
       return;
     }
 
-    const mainLeft = this.dimensions.width / this.xAxis.length * this.offsetLeft;
+    const leftOffset = this.dimensions.width * this.offsetLeft;
+    const rightOffset = this.dimensions.width * (this.offsetRight - this.offsetLeft);
 
-    mainDrag.style.left = this.dimensions.width / this.xAxis.length * this.offsetLeft + 'px';
-    mainDrag.style.width = (this.dimensions.width / this.xAxis.length * this.offsetRight - mainLeft) + 'px';
+    mainDrag.setAttribute('x', leftOffset);
+    mainDrag.setAttribute('width', rightOffset);
+
+    const leftDrag = this.offsetWrapper.querySelector('.chart__offset-left-drag');
+    const rightDrag = this.offsetWrapper.querySelector('.chart__offset-right-drag');
+    const leftSpacer = this.offsetWrapper.querySelector('.chart__offset-spacer_left');
+    const rightSpacer = this.offsetWrapper.querySelector('.chart__offset-spacer_right');
+
+    if (!leftDrag && !rightDrag && !leftSpacer && !rightSpacer) {
+      return;
+    }
+
+    leftDrag.setAttribute('x', leftOffset);
+    rightDrag.setAttribute('x', rightOffset);
+
+    leftSpacer.setAttribute('width', leftOffset);
+
+    rightSpacer.setAttribute('x', rightOffset);
+    rightSpacer.setAttribute('width', this.dimensions.width - rightOffset);
   }
 
   findMaximumAndMinimum() {
-    this.maximum = findMaximum(this.lines
+    const elements = this.lines
       .filter(line => line.visible)
-      .map(line => findMaximum(line.data)));
-    this.minimum = findMinimum(this.lines
-      .filter(line => line.visible)
-      .map(line => findMinimum(line.data)));
+      .map(line => line.data.slice(Math.floor(this.offsetLeft * this.xAxis.length), Math.ceil(this.offsetRight * this.xAxis.length)));
+    this.maximum = findMaximum(elements
+      .map(line => findMaximum(line)));
+    this.minimum = findMinimum(elements
+      .map(line => findMinimum(line)));
   }
 
   setDimensions() {
@@ -255,12 +292,24 @@ class TelegramChart {
       this.linesViewport.appendChild(line.viewport);
     }
 
+    const zoomRatio = 1 / (this.offsetRight - this.offsetLeft);
+
     const coords = line.data
-      .slice(this.offsetLeft, this.offsetRight)
-      .map((data, index, array) => index === 0 ? `M${index},${data / this.maximum * this.dimensions.height}` : `L${this.dimensions.width / array.length * index},${data / this.maximum * this.dimensions.height}`)
-      .join('');
+      // .slice(this.offsetLeft, this.offsetRight)
+      .map((data, index) => {
+        const x = this.dimensions.width / this.xAxis.length * index * zoomRatio;
+        const y = data / (this.maximum + this.minimum) * this.dimensions.height;
+
+        if (index === 0) {
+          return `M${x},${y}`;
+        }
+
+        return `L${x},${y}`;
+      })
+      .join();
 
     line.viewport.setAttribute('d', coords);
+    line.viewport.style.transform = `translate(${-this.offsetLeft * this.dimensions.width * zoomRatio}px, 0)`;
   }
 
   renderInfo() {
@@ -275,6 +324,5 @@ class TelegramChart {
     this.renderXAxis();
     this.renderLines();
     this.renderOffsets();
-    console.log(this);
   }
 }

@@ -8,19 +8,16 @@ html, body {
 }
 
 .chart svg {
-    overflow: hidden;
+    overflow-x: hidden;
 }
 
 .chart__offset-wrapper {
     height: 50px;
     position: relative;
+    width: 100%;
 }
 
-.chart__offset-main-drag {
-    position: absolute;
-    left: 0;
-    top: 0;
-    min-width: 30px;
+.chart__offset-main-drag, .chart__offset-spacer {
     height: 100%;
 }
 
