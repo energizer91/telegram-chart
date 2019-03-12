@@ -42,3 +42,9 @@ html, body {
 .chart__offset-spacer {
     fill: rgba(0, 0, 0, 0.4);
 }
+
+.chart__x-axis line {
+    stroke: black;
+    stroke-width: 1px;
+    fill: none;
+}

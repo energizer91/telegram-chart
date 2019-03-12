@@ -16,6 +16,20 @@ document.addEventListener('DOMContentLoaded', () => {
 const svgNS = 'http://www.w3.org/2000/svg';
 const findMaximum = array => array.reduce((acc, item) => item >= acc ? item : acc, -Infinity);
 const findMinimum = array => array.reduce((acc, item) => item <= acc ? item : acc, Infinity);
+const months = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec'
+];
 
 class TelegramChart {
   constructor(selector, data = {}, params = {}) {
@@ -23,8 +37,8 @@ class TelegramChart {
     this.params = params;
 
     this.dimensions = {
-      width: this.params.width || this.container.offsetWidth,
-      height: this.params.height || this.container.offsetHeight
+      width: this.params.width || this.container.clientWidth,
+      height: this.params.height || this.container.clientHeight
     };
 
     this.createViewport();
@@ -140,7 +154,7 @@ class TelegramChart {
         rightDragging = e.clientX - this.offsetRight * this.dimensions.width + 5;
       }
     });
-    document.addEventListener('mouseup', e => {
+    document.addEventListener('mouseup', () => {
       mainDragging = -1;
       leftDragging = -1;
       rightDragging = -1;
@@ -274,7 +288,7 @@ class TelegramChart {
   }
 
   setDimensions() {
-    this.dimensions.width = this.container.offsetWidth;
+    this.dimensions.width = this.container.clientWidth;
 
     this.setViewportAttributes();
   }
@@ -296,15 +310,78 @@ class TelegramChart {
   renderXAxis() {
     if (!this.xAxisViewport) {
       this.xAxisViewport = document.createElementNS(svgNS, 'g');
-      this.viewport.appendChild(this.xAxisViewport);
       this.xAxisViewport.classList.add('chart__x-axis');
+
+      const line = document.createElementNS(svgNS, 'line');
+      line.setAttribute('x1', 0);
+      line.setAttribute('y1', 0);
+      line.setAttribute('x2', this.dimensions.width);
+      line.setAttribute('y2', 0);
+      this.xAxisViewport.appendChild(line);
+
+      this.viewport.appendChild(this.xAxisViewport);
+      this.xAxisViewport.style.transform = `translate(0, ${this.dimensions.height}px)`;
     }
 
-    this.xAxisViewport.setAttribute('transform', `translate(0, ${this.dimensions.height})`);
+    this.createXTicks();
+  }
+
+  createXTicks() {
+    const leftMargin = Math.floor(this.offsetLeft * this.xAxis.length);
+    const rightMargin = Math.ceil(this.offsetRight * this.xAxis.length);
+    // const availableDots = this.xAxis.slice(leftMargin, rightMargin);
+    const timeInterval = this.xAxis[rightMargin] - this.xAxis[leftMargin];
+    let ticksCount = timeInterval / 1000 / 60 / 60 / 24;
+
+    while (ticksCount > 6) {
+      ticksCount /= 2;
+    }
+
+    ticksCount = Math.round(ticksCount);
+
+    const zoomRatio = 1 / (this.offsetRight - this.offsetLeft);
+
+    this.xAxisTicks.forEach(tick => {
+      if (tick.viewport) {
+        this.xAxisViewport.removeChild(tick.viewport);
+      }
+    });
+
+    this.xAxisTicks = [];
+
+    for (let i = 0; i < this.xAxis.length; i++) {
+      if (i % ticksCount !== 0) {
+        continue;
+      }
+      const newIndex = i * ticksCount;
+
+      this.xAxisTicks.push({
+        label: this.getDateLabel(this.xAxis[newIndex]),
+        value: this.xAxis[newIndex],
+        position: -this.offsetLeft * this.dimensions.width * zoomRatio + this.dimensions.width / this.xAxis.length * (newIndex) * zoomRatio,
+        viewport: null
+      });
+    }
+
+    this.renderXTicks();
   }
 
   renderXTicks() {
+    this.xAxisTicks.forEach(tick => {
+      if (!tick.viewport) {
+        tick.viewport = document.createElementNS(svgNS, 'text');
+        this.xAxisViewport.appendChild(tick.viewport);
+      }
 
+      tick.viewport.innerHTML = tick.label;
+      tick.viewport.setAttribute('transform', `translate(${tick.position}, 0)`);
+    })
+  }
+
+  getDateLabel(time) {
+    const date = new Date(time);
+
+    return months[date.getMonth()] + ' ' + date.getDate();
   }
 
   renderColumns() {
@@ -317,9 +394,11 @@ class TelegramChart {
   }
 
   renderLine(line) {
-    if (!line.visible && line.viewport) {
-      this.linesViewport.removeChild(line.viewport);
-      line.viewport = null;
+    if (!line.visible) {
+      if (line.viewport) {
+        this.linesViewport.removeChild(line.viewport);
+        line.viewport = null;
+      }
       return;
     }
 
@@ -341,9 +420,11 @@ class TelegramChart {
   }
 
   renderOffsetLine(line) {
-    if (!line.visible && line.offsetViewport) {
-      this.offsetLinesWrapper.removeChild(line.offsetViewport);
-      line.offsetViewport = null;
+    if (!line.visible) {
+      if (line.offsetViewport) {
+        this.offsetLinesWrapper.removeChild(line.offsetViewport);
+        line.offsetViewport = null;
+      }
       return;
     }
 
@@ -381,10 +462,6 @@ class TelegramChart {
   }
 
   renderInfo() {
-
-  }
-
-  renderLineSwitches() {
 
   }
 
