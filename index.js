@@ -13,6 +13,35 @@ document.addEventListener('DOMContentLoaded', () => {
     })
 });
 
+const findNode = (ticks, fn) => {
+  for (let i = 0; i < ticks.length; i++) {
+    if (fn(ticks[i])) {
+      return i;
+    }
+  }
+
+  return -1;
+};
+
+const removeAnimation = (node, parent, duration = 300) => {
+  const start = Date.now();
+  const easeInQuad = t => t * t;
+  const animationFrameFn = () => {
+    const now = Date.now();
+    const p = (now - start) / duration;
+    const result = easeInQuad(p);
+    node.style.opacity = 1 - result;
+
+    if (result >= 1){
+      parent.removeChild(node);
+    } else {
+      requestAnimationFrame(animationFrameFn)
+    }
+  };
+
+  requestAnimationFrame(animationFrameFn);
+};
+
 const svgNS = 'http://www.w3.org/2000/svg';
 const findMaximum = array => array.reduce((acc, item) => item >= acc ? item : acc, -Infinity);
 const findMinimum = array => array.reduce((acc, item) => item <= acc ? item : acc, Infinity);
@@ -315,65 +344,77 @@ class TelegramChart {
       const line = document.createElementNS(svgNS, 'line');
       line.setAttribute('x1', 0);
       line.setAttribute('y1', 0);
-      line.setAttribute('x2', this.dimensions.width);
       line.setAttribute('y2', 0);
       this.xAxisViewport.appendChild(line);
 
+      const tickContainer = document.createElementNS(svgNS, 'g');
+      tickContainer.classList.add('chart__x-ticks');
+      this.xAxisViewport.appendChild(tickContainer);
+
       this.viewport.appendChild(this.xAxisViewport);
       this.xAxisViewport.style.transform = `translate(0, ${this.dimensions.height}px)`;
+    }
+
+    const line = this.xAxisViewport.querySelector('line');
+
+    if (line) {
+      line.setAttribute('x2', this.dimensions.width);
     }
 
     this.createXTicks();
   }
 
   createXTicks() {
-    const leftMargin = Math.floor(this.offsetLeft * this.xAxis.length);
-    const rightMargin = Math.ceil(this.offsetRight * this.xAxis.length);
-    // const availableDots = this.xAxis.slice(leftMargin, rightMargin);
-    const timeInterval = this.xAxis[rightMargin] - this.xAxis[leftMargin];
-    let ticksCount = timeInterval / 1000 / 60 / 60 / 24;
-
-    while (ticksCount > 6) {
-      ticksCount /= 2;
-    }
-
-    ticksCount = Math.round(ticksCount);
-
     const zoomRatio = 1 / (this.offsetRight - this.offsetLeft);
+    const oneElementWidth = 70;
+    const elementsCount = this.dimensions.width / oneElementWidth;
+    const ticksCount = Math.ceil(elementsCount * zoomRatio);
+    const tickInterval = Math.ceil(this.xAxis.length / ticksCount);
+    const tickContainer = this.xAxisViewport.querySelector('.chart__x-ticks');
+    const ticks = tickContainer.querySelectorAll('text');
 
-    this.xAxisTicks.forEach(tick => {
-      if (tick.viewport) {
-        this.xAxisViewport.removeChild(tick.viewport);
+    // TODO: refactor this code so we can reuse old texts
+    for (let i = 0; i < ticksCount; i++) {
+      const newIndex = i * tickInterval;
+      const position = -this.offsetLeft * this.dimensions.width * zoomRatio + this.dimensions.width / this.xAxis.length * (newIndex) * zoomRatio;
+      const value = this.xAxis[newIndex];
+
+      if (position >= 0 && position <= this.dimensions.width) {
+        const tick = this.createXTick(this.getDateLabel(value), value);
+        tick.setAttribute('transform', `translate(${position}, 0)`);
+
+        tickContainer.appendChild(tick);
       }
-    });
-
-    this.xAxisTicks = [];
-
-    for (let i = 0; i < this.xAxis.length; i++) {
-      if (i % ticksCount !== 0) {
-        continue;
-      }
-      const newIndex = i * ticksCount;
-
-      this.xAxisTicks.push({
-        label: this.getDateLabel(this.xAxis[newIndex]),
-        value: this.xAxis[newIndex],
-        position: -this.offsetLeft * this.dimensions.width * zoomRatio + this.dimensions.width / this.xAxis.length * (newIndex) * zoomRatio,
-        viewport: null
-      });
     }
 
-    this.renderXTicks();
+    const leftMargin = Math.floor(this.offsetLeft * this.dimensions.width);
+    const rightMargin = Math.floor(this.offsetRight * this.dimensions.width);
+
+    for (let i = 0; i < ticks.length; i++) {
+      if (ticks[i].dataset.value < leftMargin || ticks[i].dataset.value > rightMargin) {
+        tickContainer.removeChild(ticks[i]);
+        // removeAnimation(ticks[i], tickContainer);
+      }
+    }
+  }
+
+  createXTick(label, value) {
+    const tick = document.createElementNS(svgNS, 'text');
+    tick.innerHTML = label;
+    tick.dataset.value = value;
+
+    return tick;
   }
 
   renderXTicks() {
     this.xAxisTicks.forEach(tick => {
       if (!tick.viewport) {
         tick.viewport = document.createElementNS(svgNS, 'text');
+        tick.viewport.innerHTML = tick.label;
+        tick.viewport.dataset.value = tick.value;
         this.xAxisViewport.appendChild(tick.viewport);
       }
 
-      tick.viewport.innerHTML = tick.label;
       tick.viewport.setAttribute('transform', `translate(${tick.position}, 0)`);
     })
   }
