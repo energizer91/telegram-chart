@@ -23,7 +23,35 @@ const findNode = (ticks, fn) => {
   return -1;
 };
 
+const createAnimation = (node, parent, duration = 300) => {
+  if (node.dataset.transition) {
+    return;
+  }
+  const start = Date.now();
+  const easeInQuad = t => t * t;
+  const animationFrameFn = () => {
+    const now = Date.now();
+    const p = (now - start) / duration;
+    const result = easeInQuad(p);
+    node.style.opacity = result;
+    node.dataset.transition = 'true';
+    parent.appendChild(node);
+
+    if (result < 1) {
+      requestAnimationFrame(animationFrameFn);
+    } else {
+      delete node.dataset.transition;
+    }
+  };
+
+  requestAnimationFrame(animationFrameFn);
+};
+
 const removeAnimation = (node, parent, duration = 300) => {
+  if (node.dataset.transition) {
+    return;
+  }
+
   const start = Date.now();
   const easeInQuad = t => t * t;
   const animationFrameFn = () => {
@@ -31,9 +59,12 @@ const removeAnimation = (node, parent, duration = 300) => {
     const p = (now - start) / duration;
     const result = easeInQuad(p);
     node.style.opacity = 1 - result;
+    node.dataset.transition = 'true';
 
-    if (result >= 1){
-      parent.removeChild(node);
+    if (result >= 1) {
+      if (parent.contains(node)) {
+        parent.removeChild(node);
+      }
     } else {
       requestAnimationFrame(animationFrameFn)
     }
@@ -77,6 +108,7 @@ class TelegramChart {
     this.xAxis = data.columns.find(column => data.types[column[0]] === 'x').slice(1);
     this.xAxisViewport = null;
     this.xAxisTicks = [];
+    this.tickInterval = 0;
     this.lines = data.columns.filter(column => data.types[column[0]] === 'line').map(line => {
       const id = line[0];
 
@@ -94,7 +126,7 @@ class TelegramChart {
     this.createLinesViewport();
     this.createToggleCheckboxes();
 
-    this.offsetLeft = 0.1;
+    this.offsetLeft = 0.3;
     this.offsetRight = 0.7;
     this.maximum = 0;
     this.minimum = 0;
@@ -369,9 +401,24 @@ class TelegramChart {
     const oneElementWidth = 70;
     const elementsCount = this.dimensions.width / oneElementWidth;
     const ticksCount = Math.ceil(elementsCount * zoomRatio);
-    const tickInterval = Math.ceil(this.xAxis.length / ticksCount);
     const tickContainer = this.xAxisViewport.querySelector('.chart__x-ticks');
-    const ticks = tickContainer.querySelectorAll('text');
+    let ticks = tickContainer.querySelectorAll('text');
+    let tickInterval = Math.ceil(this.xAxis.length / ticksCount);
+    let needAnimation = false;
+
+    tickInterval = 2 ** Math.ceil(Math.log(tickInterval)/Math.log(2));
+
+    if (this.tickInterval && this.tickInterval !== tickInterval) {
+      needAnimation = true;
+      for (let i = 0; i < ticks.length; i++) {
+        if (Number(ticks[i].dataset.index) % tickInterval === 0) {
+          continue;
+        }
+        removeAnimation(ticks[i], tickContainer);
+      }
+    }
+
+    this.tickInterval = tickInterval;
 
     // TODO: refactor this code so we can reuse old texts
     for (let i = 0; i < ticksCount; i++) {
@@ -379,44 +426,48 @@ class TelegramChart {
       const position = -this.offsetLeft * this.dimensions.width * zoomRatio + this.dimensions.width / this.xAxis.length * (newIndex) * zoomRatio;
       const value = this.xAxis[newIndex];
 
-      if (position >= 0 && position <= this.dimensions.width) {
-        const tick = this.createXTick(this.getDateLabel(value), value);
-        tick.setAttribute('transform', `translate(${position}, 0)`);
+      if (!value) {
+        continue;
+      }
 
-        tickContainer.appendChild(tick);
+      if (position >= 0 - oneElementWidth && position <= this.dimensions.width + oneElementWidth) {
+        const foundTick = findNode(ticks, tick => Number(tick.dataset.index) === newIndex);
+
+        if (foundTick < 0) {
+          const tick = this.createXTick(this.getDateLabel(value), newIndex);
+
+          if (needAnimation) {
+            createAnimation(tick, tickContainer);
+          } else {
+            tickContainer.appendChild(tick);
+          }
+
+        }
+      } else {
+        const foundTick = findNode(ticks, tick => Number(tick.dataset.value) === value);
+
+        if (foundTick >= 0) {
+          tickContainer.removeChild(ticks[foundTick]);
+        }
       }
     }
 
-    const leftMargin = Math.floor(this.offsetLeft * this.dimensions.width);
-    const rightMargin = Math.floor(this.offsetRight * this.dimensions.width);
+    ticks = tickContainer.querySelectorAll('text');
 
     for (let i = 0; i < ticks.length; i++) {
-      if (ticks[i].dataset.value < leftMargin || ticks[i].dataset.value > rightMargin) {
-        tickContainer.removeChild(ticks[i]);
-        // removeAnimation(ticks[i], tickContainer);
-      }
+      const index = (ticks[i].dataset.index);
+      const position = -this.offsetLeft * this.dimensions.width * zoomRatio + this.dimensions.width / this.xAxis.length * index * zoomRatio;
+
+      ticks[i].setAttribute('transform', `translate(${position}, 0)`);
     }
   }
 
-  createXTick(label, value) {
+  createXTick(label, index) {
     const tick = document.createElementNS(svgNS, 'text');
     tick.innerHTML = label;
-    tick.dataset.value = value;
+    tick.dataset.index = index;
 
     return tick;
-  }
-
-  renderXTicks() {
-    this.xAxisTicks.forEach(tick => {
-      if (!tick.viewport) {
-        tick.viewport = document.createElementNS(svgNS, 'text');
-        tick.viewport.innerHTML = tick.label;
-        tick.viewport.dataset.value = tick.value;
-        this.xAxisViewport.appendChild(tick.viewport);
-      }
-
-      tick.viewport.setAttribute('transform', `translate(${tick.position}, 0)`);
-    })
   }
 
   getDateLabel(time) {
@@ -434,26 +485,33 @@ class TelegramChart {
     this.lines.forEach(line => this.renderLine(line));
   }
 
-  renderLine(line) {
+  renderLine(line, maximum = this.maximum, minimum = this.minimum) {
     if (!line.visible) {
       if (line.viewport) {
-        this.linesViewport.removeChild(line.viewport);
-        line.viewport = null;
+        line.viewport.style.opacity = 0;
       }
-      return;
+    } else {
+      if (line.viewport) {
+        line.viewport.style.opacity = 1;
+      }
     }
 
     if (!line.viewport) {
       line.viewport = document.createElementNS(svgNS, 'path');
       line.viewport.setAttribute('stroke', line.color);
+      line.viewport.setAttribute('vector-effect', "non-scaling-stroke");
       this.linesViewport.appendChild(line.viewport);
     }
 
     const zoomRatio = 1 / (this.offsetRight - this.offsetLeft);
-    const coords = this.convertLine(line.data, this.dimensions.height, zoomRatio, this.maximum, this.minimum);
 
-    line.viewport.setAttribute('d', coords);
-    line.viewport.style.transform = `translate(${-this.offsetLeft * this.dimensions.width * zoomRatio}px, 0)`;
+    if (this.maximum !== -Infinity && this.minimum !== Infinity) {
+      const coords = this.convertLine(line.data, this.dimensions.height, maximum, minimum);
+
+      line.viewport.setAttribute('d', coords);
+    }
+
+    line.viewport.style.transform = `translate(${-this.offsetLeft * this.dimensions.width * zoomRatio}px, 0) scale(${zoomRatio}, 1)`;
   }
 
   renderOffsetLines() {
@@ -463,10 +521,12 @@ class TelegramChart {
   renderOffsetLine(line) {
     if (!line.visible) {
       if (line.offsetViewport) {
-        this.offsetLinesWrapper.removeChild(line.offsetViewport);
-        line.offsetViewport = null;
+        line.offsetViewport.style.opacity = 0;
       }
-      return;
+    } else {
+      if (line.offsetViewport) {
+        line.offsetViewport.style.opacity = 1;
+      }
     }
 
     if (!line.offsetViewport) {
@@ -475,15 +535,17 @@ class TelegramChart {
       this.offsetLinesWrapper.appendChild(line.offsetViewport);
     }
 
-    const coords = this.convertLine(line.data, 50, 1, this.offsetMaximum, this.offsetMinimum);
+    if (this.offsetMaximum !== -Infinity && this.offsetMinimum !== Infinity) {
+      const coords = this.convertLine(line.data, 50, this.offsetMaximum, this.offsetMinimum);
 
-    line.offsetViewport.setAttribute('d', coords);
+      line.offsetViewport.setAttribute('d', coords);
+    }
   }
 
-  convertLine(data, height, zoomRatio, maximum, minimum) {
+  convertLine(data, height, maximum, minimum) {
     return data
       .map((item, index) => {
-        const x = (this.dimensions.width / data.length * index * zoomRatio).toFixed(3);
+        const x = (this.dimensions.width / data.length * index).toFixed(3);
         const y = (item / (maximum + minimum) * height).toFixed(3);
 
         if (index === 0) {

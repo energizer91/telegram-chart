@@ -3,6 +3,10 @@ html, body {
     padding: 0;
 }
 
+body {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
 .chart {
     width: 100%;
 }
@@ -17,8 +21,14 @@ html, body {
     width: 100%;
 }
 
+.chart__offset-wrapper path {
+    transition: d 0.3s, opacity 0.3s;
+    transform-origin: left;
+}
+
 .chart__viewport path {
-    /*transition: d 0.1s;*/
+    transition: d 0.3s, opacity 0.3s ease-out;
+    transform-origin: left;
 }
 
 .chart__offset-main-drag, .chart__offset-spacer {
