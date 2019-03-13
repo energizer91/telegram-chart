@@ -74,8 +74,8 @@ const removeAnimation = (node, parent, duration = 300) => {
 };
 
 const svgNS = 'http://www.w3.org/2000/svg';
-const findMaximum = array => array.reduce((acc, item) => item >= acc ? item : acc, -Infinity);
-const findMinimum = array => array.reduce((acc, item) => item <= acc ? item : acc, Infinity);
+const findMaximum = array => array.reduce((acc, item) => item > acc ? item : acc, -Infinity);
+const findMinimum = array => array.reduce((acc, item) => item < acc ? item : acc, Infinity);
 const months = [
   'Jan',
   'Feb',
@@ -107,7 +107,7 @@ class TelegramChart {
 
     this.xAxis = data.columns.find(column => data.types[column[0]] === 'x').slice(1);
     this.xAxisViewport = null;
-    this.xAxisTicks = [];
+    this.widthCoef = (1300 - 350) / (70 - 50);
     this.tickInterval = 0;
     this.lines = data.columns.filter(column => data.types[column[0]] === 'line').map(line => {
       const id = line[0];
@@ -381,7 +381,14 @@ class TelegramChart {
 
       const tickContainer = document.createElementNS(svgNS, 'g');
       tickContainer.classList.add('chart__x-ticks');
+      tickContainer.setAttribute('vector-effect', "non-scaling-stroke");
       this.xAxisViewport.appendChild(tickContainer);
+
+      for (let i = 0; i < this.xAxis.length; i++) {
+        const newTick = this.createXTick(this.getDateLabel(this.xAxis[i]), this.xAxis[i]);
+
+        tickContainer.appendChild(newTick);
+      }
 
       this.viewport.appendChild(this.xAxisViewport);
       this.xAxisViewport.style.transform = `translate(0, ${this.dimensions.height}px)`;
@@ -396,67 +403,99 @@ class TelegramChart {
     this.createXTicks();
   }
 
+  // createXTicks() {
+  //   const zoomRatio = 1 / (this.offsetRight - this.offsetLeft);
+  //   const oneElementWidth = 70;
+  //   // const elementsCount = this.dimensions.width / oneElementWidth;
+  //   // const ticksCount = Math.ceil(elementsCount * zoomRatio);
+  //   const tickContainer = this.xAxisViewport.querySelector('.chart__x-ticks');
+  //   let ticks = tickContainer.querySelectorAll('text');
+  //   // let tickInterval = Math.ceil(this.xAxis.length / ticksCount);
+  //   let needAnimation = false;
+  //
+  //   const ticksPerScreen = 5 * zoomRatio;
+  //
+  //   console.log(zoomRatio.toFixed(1), ticksPerScreen, Math.floor(ticksPerScreen), Math.ceil(ticksPerScreen), Math.round(ticksPerScreen));
+  //
+  //   const tickInterval = Math.round(Math.min((2 ** Math.max(Math.floor(ticksPerScreen) - Math.round(zoomRatio - 1), 0)), this.xAxis.length - 1)); // every
+  //   const ticksCount = Math.min(this.xAxis.length / tickInterval + 1, this.xAxis.length); // have
+  //   // const ticksCount = Math.floor(elementsCount * zoomRatio);
+  //
+  //   // tickInterval = Math.floor(1 + zoomRatio);
+  //
+  //   if (this.tickInterval && this.tickInterval !== tickInterval) {
+  //     needAnimation = true;
+  //     for (let i = 0; i < ticks.length; i++) {
+  //       if (Number(ticks[i].dataset.index) % tickInterval === 0) {
+  //         continue;
+  //       }
+  //       removeAnimation(ticks[i], tickContainer);
+  //     }
+  //   }
+  //
+  //   this.tickInterval = tickInterval;
+  //
+  //   // TODO: refactor this code so we can reuse old texts
+  //   for (let i = 0; i < ticksCount; i++) {
+  //     const newIndex = i * tickInterval;
+  //     const position = -this.offsetLeft * this.dimensions.width * zoomRatio + this.dimensions.width / this.xAxis.length * (newIndex) * zoomRatio;
+  //     const value = this.xAxis[newIndex];
+  //
+  //     if (!value) {
+  //       continue;
+  //     }
+  //
+  //     if (position >= 0 - oneElementWidth && position <= this.dimensions.width + oneElementWidth) {
+  //       const foundTick = findNode(ticks, tick => Number(tick.dataset.index) === newIndex);
+  //
+  //       if (foundTick < 0) {
+  //         const tick = this.createXTick(this.getDateLabel(value), newIndex);
+  //
+  //         if (needAnimation) {
+  //           createAnimation(tick, tickContainer);
+  //         } else {
+  //           tickContainer.appendChild(tick);
+  //         }
+  //
+  //       }
+  //     } else {
+  //       const foundTick = findNode(ticks, tick => Number(tick.dataset.value) === value);
+  //
+  //       if (foundTick >= 0) {
+  //         tickContainer.removeChild(ticks[foundTick]);
+  //       }
+  //     }
+  //   }
+  //
+  //
+  //
+  //   ticks = tickContainer.querySelectorAll('text');
+  //
+  //   for (let i = 0; i < ticks.length; i++) {
+  //     const index = (ticks[i].dataset.index);
+  //     const position = -this.offsetLeft * this.dimensions.width * zoomRatio + this.dimensions.width / this.xAxis.length * index * zoomRatio;
+  //
+  //     ticks[i].setAttribute('transform', `translate(${position}, 0)`);
+  //   }
+  // }
+
   createXTicks() {
-    const zoomRatio = 1 / (this.offsetRight - this.offsetLeft);
-    const oneElementWidth = 70;
-    const elementsCount = this.dimensions.width / oneElementWidth;
-    const ticksCount = Math.ceil(elementsCount * zoomRatio);
     const tickContainer = this.xAxisViewport.querySelector('.chart__x-ticks');
-    let ticks = tickContainer.querySelectorAll('text');
-    let tickInterval = Math.ceil(this.xAxis.length / ticksCount);
-    let needAnimation = false;
+    const ticks = tickContainer.querySelectorAll('text');
 
-    tickInterval = 2 ** Math.ceil(Math.log(tickInterval)/Math.log(2));
-
-    if (this.tickInterval && this.tickInterval !== tickInterval) {
-      needAnimation = true;
-      for (let i = 0; i < ticks.length; i++) {
-        if (Number(ticks[i].dataset.index) % tickInterval === 0) {
-          continue;
-        }
-        removeAnimation(ticks[i], tickContainer);
-      }
-    }
-
-    this.tickInterval = tickInterval;
-
-    // TODO: refactor this code so we can reuse old texts
-    for (let i = 0; i < ticksCount; i++) {
-      const newIndex = i * tickInterval;
-      const position = -this.offsetLeft * this.dimensions.width * zoomRatio + this.dimensions.width / this.xAxis.length * (newIndex) * zoomRatio;
-      const value = this.xAxis[newIndex];
-
-      if (!value) {
-        continue;
-      }
-
-      if (position >= 0 - oneElementWidth && position <= this.dimensions.width + oneElementWidth) {
-        const foundTick = findNode(ticks, tick => Number(tick.dataset.index) === newIndex);
-
-        if (foundTick < 0) {
-          const tick = this.createXTick(this.getDateLabel(value), newIndex);
-
-          if (needAnimation) {
-            createAnimation(tick, tickContainer);
-          } else {
-            tickContainer.appendChild(tick);
-          }
-
-        }
-      } else {
-        const foundTick = findNode(ticks, tick => Number(tick.dataset.value) === value);
-
-        if (foundTick >= 0) {
-          tickContainer.removeChild(ticks[foundTick]);
-        }
-      }
-    }
-
-    ticks = tickContainer.querySelectorAll('text');
+    const zoomRatio = 1 / (this.offsetRight - this.offsetLeft);
+    const comfortableCount = ticks.length / 5;
+    const tickInterval = Math.floor(Math.log(comfortableCount / zoomRatio)/Math.log(2));
+    const removeEvery = Math.round(2 ** (tickInterval + 1));
 
     for (let i = 0; i < ticks.length; i++) {
-      const index = (ticks[i].dataset.index);
-      const position = -this.offsetLeft * this.dimensions.width * zoomRatio + this.dimensions.width / this.xAxis.length * index * zoomRatio;
+      if ((i % removeEvery !== 0) && i !== 0 && i !== ticks.length - 1) {
+        ticks[i].style.opacity = 0;
+      } else {
+        ticks[i].style.opacity = 1;
+      }
+
+      const position = -this.offsetLeft * this.dimensions.width * zoomRatio + this.dimensions.width / this.xAxis.length * i * zoomRatio;
 
       ticks[i].setAttribute('transform', `translate(${position}, 0)`);
     }
@@ -522,6 +561,7 @@ class TelegramChart {
     if (!line.visible) {
       if (line.offsetViewport) {
         line.offsetViewport.style.opacity = 0;
+        return;
       }
     } else {
       if (line.offsetViewport) {

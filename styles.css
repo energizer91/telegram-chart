@@ -58,3 +58,8 @@ body {
     stroke-width: 1px;
     fill: none;
 }
+
+.chart__x-axis text {
+    font-size: 10px;
+    transition: opacity 0.3s;
+}
