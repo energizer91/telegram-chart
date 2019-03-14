@@ -23,12 +23,12 @@ body {
 
 .chart__offset-wrapper path {
     transition: d 0.3s, opacity 0.3s;
-    transform-origin: left;
+    transform-origin: left center;
 }
 
 .chart__viewport path {
     transition: d 0.3s, opacity 0.3s ease-out;
-    transform-origin: left;
+    transform-origin: left center;
 }
 
 .chart__offset-main-drag, .chart__offset-spacer {
@@ -37,32 +37,34 @@ body {
 
 .chart__offset-main-drag {
     height: 100%;
-    stroke: rgba(0, 0, 0, 0.6);
-    stroke-width: 1px;
+    stroke: rgba(90, 200, 250, 0.4);
+    stroke-width: 2px;
     cursor: grab;
 }
 
 .chart__offset-drag {
     width: 5px;
-    height: 100%;
-    fill: rgba(0, 0, 0, 0.6);
+    y: 1px;
+    height: 48px;
+    fill: rgba(90, 200, 250, 0.4);
     cursor: grab;
 }
 
 .chart__offset-spacer {
-    fill: rgba(0, 0, 0, 0.4);
+    fill: rgba(152, 152, 157, 0.4);
 }
 
 .chart__x-axis line {
     stroke: black;
     stroke-width: 1px;
-    fill: none;
+    stroke: rgba(152, 152, 157, 0.4);
 }
 
 .chart__x-axis text {
     font-size: 10px;
     /*transition: opacity 0.3s;*/
     text-anchor: middle;
+    fill: rgba(152, 152, 157, 1);
 }
 
 /*.chart__x-axis text:first-child {*/
