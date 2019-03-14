@@ -61,5 +61,14 @@ body {
 
 .chart__x-axis text {
     font-size: 10px;
-    transition: opacity 0.3s;
+    /*transition: opacity 0.3s;*/
+    text-anchor: middle;
 }
+
+/*.chart__x-axis text:first-child {*/
+    /*text-anchor: start;*/
+/*}*/
+
+/*.chart__x-axis text:last-child {*/
+    /*text-anchor: end;*/
+/*}*/
