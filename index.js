@@ -116,6 +116,15 @@ const months = [
   'Nov',
   'Dec'
 ];
+const weeks = [
+  'Sun',
+  'Mon',
+  'Tue',
+  'Wen',
+  'Thu',
+  'Fri',
+  'Sat'
+];
 
 class TelegramChart {
   constructor(selector, data = {}, params = {}) {
@@ -135,6 +144,8 @@ class TelegramChart {
     this.xAxis = data.columns.find(column => data.types[column[0]] === 'x').slice(1);
     this.xAxisViewport = null;
     this.ticksCount = 0;
+    this.selectedX = -1;
+    this.infoViewport = null;
     this.lines = data.columns.filter(column => data.types[column[0]] === 'line').map(line => {
       const id = line[0];
 
@@ -174,6 +185,18 @@ class TelegramChart {
     this.viewport = document.createElementNS(svgNS, 'svg');
     this.viewport.classList.add('chart__viewport');
     this.container.appendChild(this.viewport);
+
+    this.viewport.addEventListener('mousemove', e => {
+      e.preventDefault();
+
+      this.selectedX = Math.floor((this.offsetLeft + e.clientX / this.dimensions.width * (this.offsetRight - this.offsetLeft)) * this.xAxis.length);
+
+      this.renderInfo();
+    });
+
+    document.addEventListener('mousemove', () => {
+      this.selectedX = -1;
+    })
   }
 
   createLinesViewport() {
@@ -189,6 +212,14 @@ class TelegramChart {
     this.offsetWrapper = document.createElementNS(svgNS, 'svg');
     this.offsetWrapper.classList.add('chart__offset-wrapper');
     this.container.appendChild(this.offsetWrapper);
+
+    this.offsetLinesWrapper = document.createElementNS(svgNS, 'g');
+    this.offsetLinesWrapper.setAttribute('fill', 'none');
+    this.offsetLinesWrapper.setAttribute('stroke-width', '1');
+    this.offsetLinesWrapper.setAttribute('stroke-linecap', 'round');
+    this.offsetLinesWrapper.setAttribute('stroke-linejoin', 'round');
+    this.offsetLinesWrapper.classList.add('chart__offset-line-wrapper');
+    this.offsetWrapper.appendChild(this.offsetLinesWrapper);
 
     const mainDrag = document.createElementNS(svgNS, 'rect');
     mainDrag.classList.add('chart__offset-main-drag');
@@ -206,14 +237,6 @@ class TelegramChart {
     rightDrag.classList.add('chart__offset-drag_right');
     this.offsetWrapper.appendChild(rightDrag);
 
-    this.offsetLinesWrapper = document.createElementNS(svgNS, 'g');
-    this.offsetLinesWrapper.setAttribute('fill', 'none');
-    this.offsetLinesWrapper.setAttribute('stroke-width', '2');
-    this.offsetLinesWrapper.setAttribute('stroke-linecap', 'round');
-    this.offsetLinesWrapper.setAttribute('stroke-linejoin', 'round');
-    this.offsetLinesWrapper.classList.add('chart__offset-line-wrapper');
-    this.offsetWrapper.appendChild(this.offsetLinesWrapper);
-
     const leftSpacer = document.createElementNS(svgNS, 'rect');
     leftSpacer.classList.add('chart__offset-spacer');
     leftSpacer.classList.add('chart__offset-spacer_left');
@@ -225,96 +248,69 @@ class TelegramChart {
     rightSpacer.classList.add('chart__offset-spacer_right');
     this.offsetWrapper.appendChild(rightSpacer);
 
-    let mainDragging = -1;
-    let leftDragging = -1;
-    let rightDragging = -1;
+    let leftDragging = false;
+    let rightDragging = false;
+    let leftCoordinate = 0;
+    let rightCoordinate = 0;
+    let safetyZone = 20;
 
-    document.addEventListener('mousedown', e => {
-      if (e.target === mainDrag) {
+    const mouseDownHandler = e => {
+      const x = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
+
+      if ((x >= this.offsetLeft * this.dimensions.width - safetyZone) && (x < this.offsetRight * this.dimensions.width - safetyZone)) {
         e.stopPropagation();
-        mainDragging = e.clientX - this.offsetLeft * this.dimensions.width;
-      } else if (e.target === leftDrag) {
-        e.stopPropagation();
-        leftDragging = e.clientX - this.offsetLeft * this.dimensions.width;
-      } else if (e.target === rightDrag) {
-        e.stopPropagation();
-        rightDragging = e.clientX - this.offsetRight * this.dimensions.width + 5;
+        leftDragging = true;
+        leftCoordinate = x - this.offsetLeft * this.dimensions.width;
       }
-    });
-    document.addEventListener('mouseup', () => {
-      mainDragging = -1;
-      leftDragging = -1;
-      rightDragging = -1;
-    });
-
-    document.addEventListener('mousemove', e => {
-      if (mainDragging >= 0) {
+      if ((x > this.offsetLeft * this.dimensions.width + safetyZone) && (x <= this.offsetRight * this.dimensions.width + safetyZone)) {
         e.stopPropagation();
-        let newLeft = e.clientX - mainDragging;
-        let newRight = newLeft + (this.offsetRight - this.offsetLeft) * this.dimensions.width;
+        rightDragging = true;
+        rightCoordinate = x - this.offsetRight * this.dimensions.width;
+      }
+    };
+    const mouseUpHandler = () => {
+      leftDragging = false;
+      rightDragging = false;
+      leftCoordinate = 0;
+      rightCoordinate = 0;
+    };
+    const mouseMoveHandler = e => {
+      const x = e.changedTouches && e.changedTouches.length ? e.changedTouches[0].clientX : e.clientX;
 
-        if (newLeft < 0) {
-          // TODO: Fix jumping
-          newRight = e.clientX + mainDragging;
-          newLeft = 0;
+      if (leftDragging || rightDragging) {
+        if (leftDragging) {
+          let newLeft = x - leftCoordinate;
+
+          if (newLeft < 0) {
+            newLeft = 0;
+          }
+
+          this.offsetLeft = newLeft / this.dimensions.width;
         }
 
-        if (newRight > this.dimensions.width) {
-          newRight = this.dimensions.width;
+        if (rightDragging) {
+          let newRight = x - rightCoordinate;
+
+          if (newRight > this.dimensions.width) {
+            newRight = this.dimensions.width;
+          }
+
+          this.offsetRight = newRight / this.dimensions.width;
         }
-
-        this.offsetLeft = newLeft / this.dimensions.width;
-        this.offsetRight = newRight / this.dimensions.width;
-
-        this.render();
-      } else if (leftDragging >= 0) {
-        e.stopPropagation();
-        let newPosition = e.clientX - leftDragging;
-
-        if (newPosition < 0) {
-          newPosition = 0;
-        }
-
-        if (newPosition > this.dimensions.width) {
-          newPosition = this.dimensions.width;
-        }
-
-        // if (newPosition / this.dimensions.width + 0.1 > this.offsetRight) {
-        //   newPosition = e.clientX + leftDragging;
-        // }
-
-        const newOffsetLeft = newPosition / this.dimensions.width;
-
-        if (newOffsetLeft === this.offsetLeft) {
-          return;
-        }
-
-        this.offsetLeft = newOffsetLeft;
-
-        this.render();
-      } else if (rightDragging >= 0) {
-        e.stopPropagation();
-        let newPosition = e.clientX - rightDragging;
-
-        if (newPosition < 0) {
-          newPosition = 0;
-        }
-
-        if (newPosition > this.dimensions.width) {
-          newPosition = this.dimensions.width;
-        }
-
-        const newOffsetRight = newPosition / this.dimensions.width;
-
-        if (newOffsetRight === this.offsetRight) {
-          return;
-        }
-
-        this.offsetRight = newOffsetRight;
 
         this.render();
       }
-    });
+    };
+
+    if ('ontouchstart' in window) {
+      this.offsetWrapper.addEventListener('touchstart', e => mouseDownHandler(e));
+      this.offsetWrapper.addEventListener('touchmove', e => mouseMoveHandler(e));
+      document.addEventListener('touchend', () => mouseUpHandler());
+    } else {
+      this.offsetWrapper.addEventListener('mousedown', e => mouseDownHandler(e));
+      this.offsetWrapper.addEventListener('mousemove', e => mouseMoveHandler(e));
+      document.addEventListener('mouseup', () => mouseUpHandler());
+    }
   }
 
   createToggleCheckboxes() {
@@ -330,8 +326,12 @@ class TelegramChart {
 
   renderOffsets() {
     const mainDrag = this.offsetWrapper.querySelector('.chart__offset-main-drag');
+    const leftDrag = this.offsetWrapper.querySelector('.chart__offset-drag_left');
+    const rightDrag = this.offsetWrapper.querySelector('.chart__offset-drag_right');
+    const leftSpacer = this.offsetWrapper.querySelector('.chart__offset-spacer_left');
+    const rightSpacer = this.offsetWrapper.querySelector('.chart__offset-spacer_right');
 
-    if (!mainDrag) {
+    if (!mainDrag && !leftDrag && !rightDrag && !leftSpacer && !rightSpacer) {
       return;
     }
 
@@ -339,24 +339,12 @@ class TelegramChart {
     const rightOffset = this.dimensions.width * this.offsetRight;
     const width = rightOffset - leftOffset;
 
-    mainDrag.setAttribute('x', leftOffset);
-    mainDrag.setAttribute('width', width);
-
-    const leftDrag = this.offsetWrapper.querySelector('.chart__offset-drag_left');
-    const rightDrag = this.offsetWrapper.querySelector('.chart__offset-drag_right');
-    const leftSpacer = this.offsetWrapper.querySelector('.chart__offset-spacer_left');
-    const rightSpacer = this.offsetWrapper.querySelector('.chart__offset-spacer_right');
-
-    if (!leftDrag && !rightDrag && !leftSpacer && !rightSpacer) {
-      return;
-    }
-
-    leftDrag.setAttribute('x', leftOffset + 1);
-    rightDrag.setAttribute('x', rightOffset - 6);
-
-    leftSpacer.setAttribute('width', leftOffset - 1);
-
-    rightSpacer.setAttribute('x', rightOffset + 1);
+    leftDrag.setAttribute('x', leftOffset + 4);
+    mainDrag.setAttribute('x', leftOffset + 2);
+    mainDrag.setAttribute('width', width - 4);
+    rightDrag.setAttribute('x', rightOffset - 7);
+    leftSpacer.setAttribute('width', leftOffset);
+    rightSpacer.setAttribute('x', rightOffset);
     rightSpacer.setAttribute('width', this.dimensions.width - width);
   }
 
@@ -595,8 +583,119 @@ class TelegramChart {
     this.render();
   }
 
-  renderInfo() {
+  createInfo() {
+    if (this.infoViewport) {
+      return;
+    }
 
+    this.infoViewport = document.createElementNS(svgNS, 'g');
+    this.infoViewport.classList.add('chart__info-viewport');
+
+    const xLine = document.createElementNS(svgNS, 'line');
+    xLine.classList.add('chart__info-line');
+    xLine.setAttribute('y1', '0px');
+    xLine.setAttribute('y2', (this.dimensions.chartHeight + 6) + 'px');
+    xLine.setAttribute('stroke-width', '1px');
+    this.infoViewport.appendChild(xLine);
+
+    const xInfoG = document.createElementNS(svgNS, 'g');
+    xInfoG.classList.add('chart__info-wrapper');
+    this.infoViewport.appendChild(xInfoG);
+
+    const xInfoRect = document.createElementNS(svgNS, 'rect');
+    xInfoRect.classList.add('chart__info-rect');
+    xInfoRect.setAttribute('stroke-width', '2px');
+    xInfoRect.setAttribute('fill', 'white');
+    xInfoRect.setAttribute('stroke', 'black');
+    xInfoG.appendChild(xInfoRect);
+
+    const weekLabel = document.createElementNS(svgNS, 'text');
+    weekLabel.classList.add('chart__info-week');
+    weekLabel.setAttribute('fill', 'black');
+    weekLabel.setAttribute('y', '20px');
+    xInfoG.appendChild(weekLabel);
+
+    const valuesG = document.createElementNS(svgNS, 'g');
+    valuesG.classList.add('chart__info-values');
+    xInfoG.appendChild(valuesG);
+
+    this.viewport.appendChild(this.infoViewport);
+  }
+
+  renderInfo() {
+    if (this.selectedX < 0) {
+      if (this.infoViewport) {
+        this.infoViewport.style.opacity = 0;
+      }
+
+      return;
+    }
+
+    if (!this.infoViewport) {
+      this.createInfo();
+    }
+
+    this.infoViewport.style.opacity = 1;
+
+    const weekLabel = this.infoViewport.querySelector('.chart__info-week');
+    const xLine = this.infoViewport.querySelector('.chart__info-line');
+    const valuesG = this.infoViewport.querySelector('.chart__info-values');
+    const xInfoRect = this.infoViewport.querySelector('.chart__info-rect');
+
+    const selectedElement = this.xAxis[this.selectedX];
+
+    const week = new Date(selectedElement);
+    const label = `${weeks[week.getDay()]}, ${months[week.getMonth()]} ${week.getDate()}`;
+    const zoomRatio = 1 / (this.offsetRight - this.offsetLeft);
+    const offset = (this.selectedX / (this.xAxis.length - 1) - this.offsetLeft) * this.dimensions.width * zoomRatio;
+    const elems = valuesG.querySelectorAll('text');
+
+    this.lines
+      .forEach((line, index) => {
+        const foundElem = findNode(elems, elem => elem.dataset.id === line.id);
+        let elem = elems[foundElem];
+
+        if (!elem) {
+          elem = document.createElementNS(svgNS, 'text');
+          elem.dataset.id = line.id;
+          elem.setAttribute('fill', line.color);
+          const label = document.createElementNS(svgNS, 'tspan');
+          label.classList.add('chart__info-label');
+          label.innerHTML = line.name;
+          const value = document.createElementNS(svgNS, 'tspan');
+          value.classList.add('chart__info-value');
+          elem.appendChild(value);
+          elem.appendChild(label);
+          valuesG.appendChild(elem);
+        }
+
+        const value = elem.querySelector('.chart__info-value');
+
+        if (!value) {
+          return line.data[this.selectedX];
+        }
+
+        const row = 2 % (index + 1) - 1;
+
+        elem.setAttribute('y', (50 + 10 * row) + 'px');
+        elem.setAttribute('x', (offset + 3 + 50 * index) + 'px');
+
+        value.innerHTML = line.data[this.selectedX];
+
+        return line.data[this.selectedX];
+      });
+
+    if (weekLabel.innerHTML !== label) {
+      weekLabel.innerHTML = label;
+    }
+
+    weekLabel.setAttribute('x', (offset + 3) + 'px');
+    xLine.setAttribute('x1', offset + 'px');
+    xLine.setAttribute('x2', offset + 'px');
+    xInfoRect.setAttribute('x', offset + 'px');
+    xInfoRect.setAttribute('y', '1px');
+    xInfoRect.setAttribute('width', (100) + 'px');
+    xInfoRect.setAttribute('height', (50) + 'px');
   }
 
   render() {
@@ -604,5 +703,6 @@ class TelegramChart {
     this.renderLines();
     this.renderOffsets();
     this.renderOffsetLines();
+    this.renderInfo();
   }
 }
