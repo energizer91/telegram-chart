@@ -7,8 +7,10 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-.chart {
+.charts {
     width: 100%;
+    padding: 10px;
+    box-sizing: border-box;
 }
 
 .chart svg {
@@ -37,38 +39,59 @@ body {
 
 .chart__offset-main-drag {
     height: 100%;
-    stroke: rgba(90, 200, 250, 0.4);
+    stroke: rgba(222, 234, 244, 1);
     stroke-width: 4px;
-    cursor: grab;
 }
 
 .chart__offset-drag {
     width: 3px;
     y: 2px;
     height: 46px;
-    fill: rgba(90, 200, 250, 0.4);
+    fill: rgba(222, 234, 244, 1);
 }
 
 .chart__offset-spacer {
-    fill: rgba(225, 236, 245, 0.7);
+    fill: rgba(240, 248, 253, 0.7);
 }
 
 .chart__info-line {
     stroke: rgba(152, 152, 157, 0.4);
 }
 
-.chart__x-axis line {
-    stroke: black;
+.chart__y-axis line {
+    stroke-width: 1px;
+    stroke: rgba(152, 152, 157, 0.3);
+}
+
+.chart__y-line line {
     stroke-width: 1px;
     stroke: rgba(152, 152, 157, 0.4);
 }
 
-.chart__x-axis text {
+.chart__x-axis text, .chart__y-axis text {
     font-size: 10px;
     text-anchor: middle;
     fill: rgba(152, 152, 157, 1);
 }
 
+.chart__y-axis text {
+    text-anchor: start;
+}
+
 .chart__info-rect {
-    filter: drop-shadow(0 3px 11px rgba(50, 50, 50, 0.75));
+    filter: url('#info-filter');
+}
+
+.chart__info-value {
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.chart__info-label {
+    font-weight: 300;
+    font-size: 12px;
+}
+
+.chart__y-axis {
+
 }
