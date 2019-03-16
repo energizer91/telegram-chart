@@ -17,6 +17,10 @@ body {
     overflow-x: hidden;
 }
 
+.chart__lines-viewport {
+    transform-origin: left center;
+}
+
 .chart__offset-wrapper {
     height: 50px;
     position: relative;
@@ -92,6 +96,33 @@ body {
     font-size: 12px;
 }
 
-.chart__y-axis {
+.chart__y-axis g {
+    transition: transform 0.3s;
+}
 
+@keyframes showing {
+    0% {
+        opacity: 0
+    }
+    100% {
+        opacity: 1
+    }
+}
+
+@keyframes hidden {
+    0% {
+        opacity: 1
+    }
+    100% {
+        opacity: 0
+    }
+}
+
+.showing {
+    animation: showing 0.3s;
+}
+
+.hidden {
+    opacity: 0;
+    transition: opacity 0.3s;
 }
