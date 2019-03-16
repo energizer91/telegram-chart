@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     .then(data => data.json())
     .then(data => {
       data.slice(0, 1).map((chartData, index) => {
-        return new TelegramChart(charts, chartData, {height: 300, title: 'Chart' + (index + 1)});
+        return new TelegramChart(charts, chartData, {height: 300, title: 'Chart ' + (index + 1)});
       })
     })
 });
@@ -30,9 +30,13 @@ function tickIncrement(start, stop, count) {
   const step = (stop - start) / Math.max(0, count);
   const power = Math.floor(Math.log(step) / Math.LN10);
   const error = step / Math.pow(10, power);
-  return power >= 0
-    ? (error >= e10 ? 10 : error >= e5 ? 5 : error >= e2 ? 2 : 1) * Math.pow(10, power)
-    : -Math.pow(10, -power) / (error >= e10 ? 10 : error >= e5 ? 5 : error >= e2 ? 2 : 1);
+  const result = error >= e10 ? 10 : error >= e5 ? 5 : error >= e2 ? 2 : 1;
+
+  if (power >= 0) {
+    return Math.pow(10, power) * result;
+  }
+
+  return -Math.pow(10, -power) / result;
 }
 
 const createAnimation = (node, duration = 300) => {
@@ -186,12 +190,19 @@ class TelegramChart {
     this.container.style.width = '100%';
     selector.appendChild(this.container);
 
+    this.title = createElement('p');
+    this.title.classList.add('chart__title');
+    this.title.innerText = params.title;
+    this.container.appendChild(this.title);
+
     this.params = params;
+    this.chartPadding = 10;
 
     this.dimensions = {
       width: this.params.width || this.container.clientWidth,
       height: this.params.height || this.container.clientHeight,
-      chartHeight: (this.params.height || this.container.clientHeight) - 25
+      chartHeight: (this.params.height || this.container.clientHeight) - 25,
+      chartWidth: (this.params.width || this.container.clientWidth) - this.chartPadding * 2
     };
 
     this.createViewport();
@@ -319,9 +330,14 @@ class TelegramChart {
   }
 
   createOffsetWrapper() {
+    this.offsetContainer = createElement('div');
+    this.offsetContainer.classList.add('chart__offset-container');
+    this.offsetContainer.style.padding = `0 ${this.chartPadding}px`;
+    this.container.appendChild(this.offsetContainer);
+
     this.offsetWrapper = createElementNS('svg');
     this.offsetWrapper.classList.add('chart__offset-wrapper');
-    this.container.appendChild(this.offsetWrapper);
+    this.offsetContainer.appendChild(this.offsetWrapper);
 
     const mainDrag = createElementNS('rect', {
       fill: 'transparent'
@@ -427,13 +443,29 @@ class TelegramChart {
 
   createToggleCheckboxes() {
     this.lines.forEach(line => {
+      const label = createElement('label');
       const checkbox = createElement('input', {
         type: 'checkbox',
         checked: line.visible
       });
-      checkbox.classList.add('chart__toggle-check');
-      checkbox.addEventListener('change', () => this.toggleLine(line));
-      this.container.appendChild(checkbox);
+      const text = createElement('span');
+      const icon = createElement('div');
+
+      label.classList.add('chart__toggle-check');
+      text.innerText = line.name;
+      icon.style.backgroundColor = line.color;
+      icon.classList.add('chart__toggle-check-icon');
+
+      if (!line.visible) {
+        label.classList.add('chart__toggle-check_disabled');
+      }
+
+      checkbox.addEventListener('change', () => this.toggleLine(label, line));
+
+      label.appendChild(checkbox);
+      label.appendChild(icon);
+      label.appendChild(text);
+      this.offsetContainer.appendChild(label);
     });
   }
 
@@ -483,8 +515,10 @@ class TelegramChart {
 
   setDimensions() {
     this.dimensions.width = this.container.clientWidth;
+    this.dimensions.chartWidth = this.dimensions.width - this.chartPadding * 2;
 
     this.setViewportAttributes();
+    this.setYAxisLengths()
   }
 
   setViewportAttributes() {
@@ -499,6 +533,18 @@ class TelegramChart {
     this.offsetWrapper.setAttribute('viewBox', `0,0,${this.dimensions.width},${50}`);
     this.offsetWrapper.setAttribute('width', this.dimensions.width);
     this.offsetWrapper.setAttribute('height', '50');
+  }
+
+  setYAxisLengths() {
+    if (!this.yAxisViewport) {
+      return;
+    }
+
+    const lines = this.yAxisViewport.querySelectorAll('line');
+
+    lines.forEach(line => {
+      line.setAttribute('x2', this.dimensions.chartWidth + this.chartPadding);
+    })
   }
 
   renderXAxis() {
@@ -654,13 +700,13 @@ class TelegramChart {
   createYTick(value) {
     const tick = createElementNS('g');
     const tickLine = createElementNS('line', {
-      x1: '0',
+      x1: this.chartPadding,
       y1: '0',
-      x2: this.dimensions.width,
+      x2: this.chartPadding + this.dimensions.chartWidth,
       y2: '0'
     });
     const tickLabel = createElementNS('text', {
-      x: '0',
+      x: this.chartPadding,
       y: '-5px'
     });
 
@@ -687,7 +733,7 @@ class TelegramChart {
     this.findMaximumAndMinimum();
     this.lines.forEach(line => this.renderLine(line));
 
-    this.linesViewport.setAttribute('transform', `translate(${-this.offsetLeft * this.dimensions.width * this.zoomRatio}, 0) scale(${this.zoomRatio}, 1)`);
+    this.linesViewport.setAttribute('transform', `translate(${this.chartPadding + -this.offsetLeft * this.dimensions.chartWidth * this.zoomRatio}, 0) scale(${this.zoomRatio}, 1)`);
   }
 
   renderLine(line, maximum = this.maximum, minimum = this.minimum) {
@@ -710,7 +756,7 @@ class TelegramChart {
     }
 
     if (this.maximum !== -Infinity && this.minimum !== Infinity) {
-      const coords = this.convertLine(line.data, this.dimensions.chartHeight, maximum, minimum);
+      const coords = this.convertLine(line.data, this.dimensions.chartWidth, this.dimensions.chartHeight, maximum, minimum);
 
       line.viewport.setAttribute('d', coords);
     }
@@ -742,16 +788,16 @@ class TelegramChart {
     }
 
     if (this.offsetMaximum !== -Infinity && this.offsetMinimum !== Infinity) {
-      const coords = this.convertLine(line.data, 50, this.offsetMaximum, this.offsetMinimum);
+      const coords = this.convertLine(line.data, this.dimensions.width, 50, this.offsetMaximum, this.offsetMinimum);
 
       line.offsetViewport.setAttribute('d', coords);
     }
   }
 
-  convertLine(data, height, maximum, minimum) {
+  convertLine(data, width, height, maximum, minimum) {
     return data
       .map((item, index) => {
-        const x = (this.dimensions.width / (data.length - 1) * index).toFixed(3);
+        const x = (width / (data.length - 1) * index).toFixed(3);
         const yZoom = height / (maximum - minimum);
         const y = ((maximum - item) * yZoom).toFixed(3);
 
@@ -764,8 +810,10 @@ class TelegramChart {
       .join();
   }
 
-  toggleLine(line) {
+  toggleLine(label, line) {
     line.visible = !line.visible;
+
+    label.classList.toggle('chart__toggle-check_disabled');
 
     this.findOffsetMaximumAndMinimum();
     this.render();
@@ -858,7 +906,7 @@ class TelegramChart {
 
     const week = new Date(selectedElement);
     const label = `${weeks[week.getDay()]}, ${months[week.getMonth()]} ${week.getDate()}`;
-    const offset = (this.selectedX / (this.xAxis.length - 1) - this.offsetLeft) * this.dimensions.width * this.zoomRatio;
+    const offset = this.chartPadding + (this.selectedX / (this.xAxis.length - 1) - this.offsetLeft) * this.dimensions.chartWidth * this.zoomRatio;
     const elems = valuesG.querySelectorAll('text');
 
     let valuesLength = 0;
@@ -955,10 +1003,10 @@ class TelegramChart {
     const infoRectWidth = Math.round(Math.max(weekBB.width, labelsBB.width) + 20);
     const infoRectHeight = Math.round(weekBB.height + labelsBB.height + 22);
 
-    if (offset + infoRectWidth > this.dimensions.width) {
-      xInfoWrapper.setAttribute('transform', `translate(${-offset + this.dimensions.width - infoRectWidth}, 0)`);
-    } else if (offset - 30 < 0) {
-      xInfoWrapper.setAttribute('transform', `translate(${-offset + 35}, 0)`);
+    if (offset + infoRectWidth > this.dimensions.chartWidth - this.chartPadding) {
+      xInfoWrapper.setAttribute('transform', `translate(${-offset + this.dimensions.chartWidth - infoRectWidth + this.chartPadding * 3}, 0)`);
+    } else if (offset - this.chartPadding * 2 < 0) {
+      xInfoWrapper.setAttribute('transform', `translate(${-offset + this.chartPadding * 3}, 0)`);
     } else {
       xInfoWrapper.removeAttribute('transform');
     }

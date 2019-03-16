@@ -9,8 +9,11 @@ body {
 
 .charts {
     width: 100%;
-    padding: 10px;
-    box-sizing: border-box;
+}
+
+.chart__title {
+    font-weight: bold;
+    margin-left: 15px;
 }
 
 .chart svg {
@@ -19,6 +22,10 @@ body {
 
 .chart__lines-viewport {
     transform-origin: left center;
+}
+
+.chart__offset-container {
+    box-sizing: border-box;
 }
 
 .chart__offset-wrapper {
@@ -125,4 +132,64 @@ body {
 .hidden {
     opacity: 0;
     transition: opacity 0.3s;
+}
+
+.chart__toggle-check {
+    display: inline-block;
+    padding: 0 5px;
+    box-sizing: border-box;
+    border: 1px solid rgba(152, 152, 157, 0.4);
+    border-radius: 15px;
+    height: 30px;
+    vertical-align: middle;
+    font-size: 12px;
+    line-height: 26px;
+    margin-right: 10px;
+}
+
+.chart__toggle-check input {
+    display: none;
+}
+
+.chart__toggle-check span {
+    margin: 0 5px;
+    vertical-align: middle;
+}
+
+.chart__toggle-check-icon {
+    display: inline-block;
+    height: 18px;
+    width: 18px;
+    position: relative;
+    border-radius: 9px;
+    vertical-align: middle;
+}
+
+.chart__toggle-check-icon:before, .chart__toggle-check-icon:after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    width: 14px;
+    height: 14px;
+    transition: transform 0.3s;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+.chart__toggle-check-icon:before {
+    background-image: url('check.svg');
+}
+
+.chart__toggle-check-icon:after {
+    background-image: url('none.svg');
+    transform: scale(0);
+}
+
+.chart__toggle-check_disabled .chart__toggle-check-icon:before {
+    transform: scale(0);
+}
+.chart__toggle-check_disabled .chart__toggle-check-icon:after {
+    transform: scale(1);
 }
