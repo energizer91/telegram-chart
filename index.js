@@ -1003,7 +1003,7 @@ class TelegramChart {
     const infoRectWidth = Math.round(Math.max(weekBB.width, labelsBB.width) + 20);
     const infoRectHeight = Math.round(weekBB.height + labelsBB.height + 22);
 
-    if (offset + infoRectWidth > this.dimensions.chartWidth - this.chartPadding) {
+    if (offset + infoRectWidth - 20 > this.dimensions.chartWidth + this.chartPadding) {
       xInfoWrapper.setAttribute('transform', `translate(${-offset + this.dimensions.chartWidth - infoRectWidth + this.chartPadding * 3}, 0)`);
     } else if (offset - this.chartPadding * 2 < 0) {
       xInfoWrapper.setAttribute('transform', `translate(${-offset + this.chartPadding * 3}, 0)`);
