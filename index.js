@@ -87,6 +87,32 @@ const removeAnimation = (node, duration = 300) => {
   // setTimeout(() => node && node.remove(), duration);
 };
 
+// for creating svg elements
+const createElementNS = (tag, attrs = {}) => {
+  const elem = document.createElementNS(svgNS, tag);
+
+  for (let attr in attrs) {
+    if (attrs.hasOwnProperty(attr)) {
+      elem.setAttribute(attr, attrs[attr]);
+    }
+  }
+
+  return elem;
+};
+
+// for creating elements without namespaces
+const createElement = (tag, attrs = {}) => {
+  const elem = document.createElement(tag);
+
+  for (let attr in attrs) {
+    if (attrs.hasOwnProperty(attr)) {
+      elem.setAttribute(attr, attrs[attr]);
+    }
+  }
+
+  return elem;
+};
+
 const animate = (node, style, from, to, duration = 300) => {
   if (node.dataset.transition) {
     return Promise.resolve();
@@ -142,7 +168,7 @@ const weeks = [
 
 class TelegramChart {
   constructor(selector, data = {}, params = {}) {
-    this.container = document.createElement('div');
+    this.container = createElement('div');
     this.container.classList.add('chart');
     this.container.style.width = '100%';
     selector.appendChild(this.container);
@@ -204,7 +230,7 @@ class TelegramChart {
   }
 
   createViewport() {
-    this.viewport = document.createElementNS(svgNS, 'svg');
+    this.viewport = createElementNS('svg');
     this.viewport.classList.add('chart__viewport');
     this.container.appendChild(this.viewport);
 
@@ -232,71 +258,91 @@ class TelegramChart {
   }
 
   createDefs() {
-    this.defs = document.createElementNS(svgNS, 'defs');
+    this.defs = createElementNS('defs');
 
-    const infoFilter = document.createElementNS(svgNS, 'filter');
-    infoFilter.setAttribute('id', 'info-filter');
+    const infoFilter = createElementNS('filter', {
+      id: 'info-filter'
+    });
 
-    const feDropShadow = document.createElementNS(svgNS, 'feDropShadow');
-    feDropShadow.setAttribute('in', 'SourceGraphic');
-    feDropShadow.setAttribute('flood-color', '#98989D');
-    feDropShadow.setAttribute('flood-opacity', '0.5');
-    feDropShadow.setAttribute('stdDeviation', '1');
-    feDropShadow.setAttribute('dx', '0');
-    feDropShadow.setAttribute('dy', '1');
-    feDropShadow.setAttribute('result', 'dropShadow');
+    const feDropShadow = createElementNS('feDropShadow', {
+      in: 'SourceGraphic',
+      'flood-color': '#98989D',
+      'flood-opacity': '0.5',
+      stdDeviation: '1',
+      dx: '0',
+      dy: '1',
+      result: 'dropShadow'
+    });
+
+    const clipPath = createElementNS('clipPath', {
+      id: 'lines-clip'
+    });
+
+    const clipRect = createElementNS('rect', {
+      x: '0',
+      y: '0',
+      width: this.dimensions.width,
+      height: this.dimensions.chartHeight
+    });
+
+    clipPath.appendChild(clipRect);
 
     infoFilter.appendChild(feDropShadow);
+    this.defs.appendChild(clipPath);
     this.defs.appendChild(infoFilter);
     this.viewport.appendChild(this.defs);
   }
 
   createLinesViewport() {
-    this.linesViewport = document.createElementNS(svgNS, 'g');
+    this.linesViewport = createElementNS('g', {
+      fill: 'none',
+      'stroke-width': '3',
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round',
+      'clip-path': 'url(#lines-clip)'
+    });
     this.linesViewport.classList.add('chart__lines-viewport');
-    this.linesViewport.setAttribute('fill', 'none');
-    this.linesViewport.setAttribute('stroke-width', '3');
-    this.linesViewport.setAttribute('stroke-linecap', 'round');
-    this.linesViewport.setAttribute('stroke-linejoin', 'round');
     this.viewport.appendChild(this.linesViewport);
   }
 
   createOffsetWrapper() {
-    this.offsetWrapper = document.createElementNS(svgNS, 'svg');
+    this.offsetWrapper = createElementNS('svg');
     this.offsetWrapper.classList.add('chart__offset-wrapper');
     this.container.appendChild(this.offsetWrapper);
 
-    const mainDrag = document.createElementNS(svgNS, 'rect');
+    const mainDrag = createElementNS('rect', {
+      fill: 'transparent'
+    });
     mainDrag.classList.add('chart__offset-main-drag');
-    mainDrag.setAttribute('fill', 'transparent');
     this.offsetWrapper.appendChild(mainDrag);
 
-    const leftDrag = document.createElementNS(svgNS, 'rect');
+    const leftDrag = createElementNS('rect');
     leftDrag.classList.add('chart__offset-drag');
     leftDrag.classList.add('chart__offset-drag_left');
-    leftDrag.setAttribute('fill', 'rgba(0, 0, 0, 0.6)');
     this.offsetWrapper.appendChild(leftDrag);
 
-    const rightDrag = document.createElementNS(svgNS, 'rect');
+    const rightDrag = createElementNS('rect');
     rightDrag.classList.add('chart__offset-drag');
     rightDrag.classList.add('chart__offset-drag_right');
     this.offsetWrapper.appendChild(rightDrag);
 
-    this.offsetLinesWrapper = document.createElementNS(svgNS, 'g');
-    this.offsetLinesWrapper.setAttribute('fill', 'none');
-    this.offsetLinesWrapper.setAttribute('stroke-width', '1');
-    this.offsetLinesWrapper.setAttribute('stroke-linecap', 'round');
-    this.offsetLinesWrapper.setAttribute('stroke-linejoin', 'round');
+    this.offsetLinesWrapper = createElementNS('g', {
+      fill: 'none',
+      'stroke-width': '1',
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round'
+    });
     this.offsetLinesWrapper.classList.add('chart__offset-line-wrapper');
     this.offsetWrapper.appendChild(this.offsetLinesWrapper);
 
-    const leftSpacer = document.createElementNS(svgNS, 'rect');
+    const leftSpacer = createElementNS('rect', {
+      x: '0'
+    });
     leftSpacer.classList.add('chart__offset-spacer');
     leftSpacer.classList.add('chart__offset-spacer_left');
-    leftSpacer.setAttribute('x', '0');
     this.offsetWrapper.appendChild(leftSpacer);
 
-    const rightSpacer = document.createElementNS(svgNS, 'rect');
+    const rightSpacer = createElementNS('rect');
     rightSpacer.classList.add('chart__offset-spacer');
     rightSpacer.classList.add('chart__offset-spacer_right');
     this.offsetWrapper.appendChild(rightSpacer);
@@ -368,9 +414,10 @@ class TelegramChart {
 
   createToggleCheckboxes() {
     this.lines.forEach(line => {
-      const checkbox = document.createElement('input');
-      checkbox.setAttribute('type', 'checkbox');
-      checkbox.setAttribute('checked', line.visible);
+      const checkbox = createElement('input', {
+        type: 'checkbox',
+        checked: line.visible
+      });
       checkbox.classList.add('chart__toggle-check');
       checkbox.addEventListener('change', () => this.toggleLine(line));
       this.container.appendChild(checkbox);
@@ -443,13 +490,14 @@ class TelegramChart {
 
   renderXAxis() {
     if (!this.xAxisViewport) {
-      this.xAxisViewport = document.createElementNS(svgNS, 'g');
+      this.xAxisViewport = createElementNS('g');
       this.xAxisViewport.classList.add('chart__x-axis');
 
-      const tickContainer = document.createElementNS(svgNS, 'g');
+      const tickContainer = createElementNS('g', {
+        'vector-effect': 'non-scaling-stroke',
+        transform: 'translate(0, 15)'
+      });
       tickContainer.classList.add('chart__x-ticks');
-      tickContainer.setAttribute('vector-effect', "non-scaling-stroke");
-      tickContainer.setAttribute('transform', 'translate(0, 15)');
       this.xAxisViewport.appendChild(tickContainer);
 
       this.viewport.appendChild(this.xAxisViewport);
@@ -496,11 +544,9 @@ class TelegramChart {
 
           if (needAnimation) {
             createAnimation(tick);
-            tickContainer.appendChild(tick);
-          } else {
-            tickContainer.appendChild(tick);
           }
 
+          tickContainer.appendChild(tick);
         }
       } else {
         const foundTick = findNode(ticks, tick => Number(tick.dataset.value) === value);
@@ -522,8 +568,8 @@ class TelegramChart {
   }
 
   createXTick(index) {
-    const tick = document.createElementNS(svgNS, 'text');
-    tick.innerHTML = this.getDateLabel(this.xAxis[index]);
+    const tick = createElementNS('text');
+    tick.textContent = this.getDateLabel(this.xAxis[index]);
     tick.dataset.index = index;
 
     return tick;
@@ -531,7 +577,7 @@ class TelegramChart {
 
   renderYAxis() {
     if (!this.yAxisViewport) {
-      this.yAxisViewport = document.createElementNS(svgNS, 'g');
+      this.yAxisViewport = createElementNS('g');
       this.yAxisViewport.classList.add('chart__y-axis');
 
       this.viewport.appendChild(this.yAxisViewport);
@@ -555,8 +601,8 @@ class TelegramChart {
 
     for (let i = 0; i < ticks.length; i++) {
       if (ticks && (Number(ticks[i].dataset.id) % yTicksCount !== 0) || this.maximum === -Infinity) {
-        removeAnimation(ticks[i]);
-        // this.yAxisViewport.removeChild(ticks[i]);
+        // removeAnimation(ticks[i]);
+        this.yAxisViewport.removeChild(ticks[i]);
       }
     }
 
@@ -572,13 +618,11 @@ class TelegramChart {
       if (!tick) {
         tick = this.createYTick(value);
 
-        if (shouldAnimate) {
-          createAnimation(tick);
+        // if (shouldAnimate) {
+        //   createAnimation(tick);
+        // }
 
-          this.yAxisViewport.appendChild(tick);
-        } else {
-          this.yAxisViewport.appendChild(tick);
-        }
+        this.yAxisViewport.appendChild(tick);
       }
     }
 
@@ -593,23 +637,24 @@ class TelegramChart {
   }
 
   createYTick(value) {
-    const tick = document.createElementNS(svgNS, 'g');
-    const tickLine = document.createElementNS(svgNS, 'line');
-    const tickLabel = document.createElementNS(svgNS, 'text');
+    const tick = createElementNS('g');
+    const tickLine = createElementNS('line', {
+      x1: '0',
+      y1: '0',
+      x2: this.dimensions.width,
+      y2: '0'
+    });
+    const tickLabel = createElementNS('text', {
+      x: '0',
+      y: '-5px'
+    });
 
     if (value === this.minimum) {
       tick.classList.add('.chart__y-line');
     }
 
     tick.dataset.id = value;
-    tickLine.setAttribute('x1', '0');
-    tickLine.setAttribute('y1', '0');
-    tickLine.setAttribute('y2', '0');
-    tickLabel.setAttribute('y', '-5px');
-    tickLine.setAttribute('x2', this.dimensions.width);
-    tickLabel.setAttribute('x', '0');
-
-    tickLabel.innerHTML = value;
+    tickLabel.textContent = value;
 
     tick.appendChild(tickLine);
     tick.appendChild(tickLabel);
@@ -642,9 +687,10 @@ class TelegramChart {
     }
 
     if (!line.viewport) {
-      line.viewport = document.createElementNS(svgNS, 'path');
-      line.viewport.setAttribute('stroke', line.color);
-      line.viewport.setAttribute('vector-effect', "non-scaling-stroke");
+      line.viewport = createElementNS('path', {
+        stroke: line.color,
+        'vector-effect': 'non-scaling-stroke'
+      });
       this.linesViewport.appendChild(line.viewport);
     }
 
@@ -674,8 +720,9 @@ class TelegramChart {
     }
 
     if (!line.offsetViewport) {
-      line.offsetViewport = document.createElementNS(svgNS, 'path');
-      line.offsetViewport.setAttribute('stroke', line.color);
+      line.offsetViewport = createElementNS('path', {
+        stroke: line.color
+      });
       this.offsetLinesWrapper.appendChild(line.offsetViewport);
     }
 
@@ -714,29 +761,31 @@ class TelegramChart {
       return;
     }
 
-    this.infoViewport = document.createElementNS(svgNS, 'g');
+    this.infoViewport = createElementNS('g');
     this.infoViewport.classList.add('chart__info-viewport');
 
-    const xLine = document.createElementNS(svgNS, 'line');
+    const xLine = createElementNS('line', {
+      y1: '3px',
+      y2: this.dimensions.chartHeight + 'px',
+      x1: '0',
+      x2: '0',
+      'stroke-width': '1px'
+    });
     xLine.classList.add('chart__info-line');
-    xLine.setAttribute('y1', '3px');
-    xLine.setAttribute('y2', this.dimensions.chartHeight + 'px');
-    xLine.setAttribute('x1', '0');
-    xLine.setAttribute('x2', '0');
-    xLine.setAttribute('stroke-width', '1px');
     this.infoViewport.appendChild(xLine);
 
-    const xInfoG = document.createElementNS(svgNS, 'g');
+    const xInfoG = createElementNS('g');
     xInfoG.classList.add('chart__info-wrapper');
 
     this.lines.forEach(line => {
-      const lineCircle = document.createElementNS(svgNS, 'circle');
+      const lineCircle = createElementNS('circle', {
+        r: '5px',
+        cx: '0',
+        fill: 'white',
+        stroke: line.color,
+        'stroke-width': '3px'
+      });
       lineCircle.classList.add('chart__info-circle');
-      lineCircle.setAttribute('r', '5px');
-      lineCircle.setAttribute('cx', '0');
-      lineCircle.setAttribute('fill', 'white');
-      lineCircle.setAttribute('stroke', line.color);
-      lineCircle.setAttribute('stroke-width', '3px');
       lineCircle.dataset.id = line.id;
 
       this.infoViewport.appendChild(lineCircle);
@@ -744,24 +793,26 @@ class TelegramChart {
 
     this.infoViewport.appendChild(xInfoG);
 
-    const xInfoRect = document.createElementNS(svgNS, 'rect');
+    const xInfoRect = createElementNS('rect', {
+      'stroke-width': '1px',
+      fill: 'white',
+      rx: '5',
+      ry: '5',
+      y: '1px',
+      x: '-20px'
+    });
     xInfoRect.classList.add('chart__info-rect');
-    xInfoRect.setAttribute('stroke-width', '1px');
-    xInfoRect.setAttribute('fill', 'white');
-    xInfoRect.setAttribute('rx', '5');
-    xInfoRect.setAttribute('ry', '5');
-    xInfoRect.setAttribute('y', '1px');
-    xInfoRect.setAttribute('x', '-20px');
     xInfoG.appendChild(xInfoRect);
 
-    const weekLabel = document.createElementNS(svgNS, 'text');
+    const weekLabel = createElementNS('text', {
+      fill: 'black',
+      y: '25px',
+      x: '-10px'
+    });
     weekLabel.classList.add('chart__info-week');
-    weekLabel.setAttribute('fill', 'black');
-    weekLabel.setAttribute('y', '25px');
-    weekLabel.setAttribute('x', '-10px');
     xInfoG.appendChild(weekLabel);
 
-    const valuesG = document.createElementNS(svgNS, 'g');
+    const valuesG = createElementNS('g');
     valuesG.classList.add('chart__info-values');
     xInfoG.appendChild(valuesG);
 
@@ -806,13 +857,14 @@ class TelegramChart {
         let elem = elems[foundElem];
 
         if (!elem) {
-          elem = document.createElementNS(svgNS, 'text');
+          elem = createElementNS('text', {
+            fill: line.color
+          });
           elem.dataset.id = line.id;
-          elem.setAttribute('fill', line.color);
-          const label = document.createElementNS(svgNS, 'tspan');
+          const label = createElementNS('tspan');
           label.classList.add('chart__info-label');
-          label.innerHTML = line.name;
-          const value = document.createElementNS(svgNS, 'tspan');
+          label.textContent = line.name;
+          const value = createElementNS('tspan');
           value.classList.add('chart__info-value');
           elem.appendChild(value);
           elem.appendChild(label);
@@ -871,15 +923,15 @@ class TelegramChart {
           valuesLength += Math.max(elemLength, maxValuesLength);
         }
 
-        if (value.innerHTML !== String(line.data[this.selectedX])) {
-          value.innerHTML = line.data[this.selectedX];
+        if (value.textContent !== String(line.data[this.selectedX])) {
+          value.textContent = line.data[this.selectedX];
         }
 
         return line.data[this.selectedX];
       });
 
-    if (weekLabel.innerHTML !== label) {
-      weekLabel.innerHTML = label;
+    if (weekLabel.textContent !== label) {
+      weekLabel.textContent = label;
     }
 
     const weekBB = weekLabel.getBBox();
