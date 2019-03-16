@@ -22,6 +22,19 @@ const findNode = (ticks, fn) => {
   return -1;
 };
 
+const e10 = Math.sqrt(50);
+const e5 = Math.sqrt(10);
+const e2 = Math.sqrt(2);
+
+function tickIncrement(start, stop, count) {
+  const step = (stop - start) / Math.max(0, count);
+  const power = Math.floor(Math.log(step) / Math.LN10);
+  const error = step / Math.pow(10, power);
+  return power >= 0
+    ? (error >= e10 ? 10 : error >= e5 ? 5 : error >= e2 ? 2 : 1) * Math.pow(10, power)
+    : -Math.pow(10, -power) / (error >= e10 ? 10 : error >= e5 ? 5 : error >= e2 ? 2 : 1);
+}
+
 const createAnimation = (node, duration = 300) => {
   if (node.dataset.transition) {
     return;
@@ -299,7 +312,7 @@ class TelegramChart {
       'stroke-width': '3',
       'stroke-linecap': 'round',
       'stroke-linejoin': 'round',
-      'clip-path': 'url(#lines-clip)'
+      // 'clip-path': 'url(#lines-clip)'
     });
     this.linesViewport.classList.add('chart__lines-viewport');
     this.viewport.appendChild(this.linesViewport);
@@ -584,25 +597,36 @@ class TelegramChart {
     }
 
     this.createYTicks();
+
+    const ticks = this.yAxisViewport.querySelectorAll('g');
+
+    for (let i = 0; i < ticks.length; i++) {
+      const index = Number(ticks[i].dataset.id);
+      const coord = (this.maximum - index) / (this.maximum - this.minimum) * this.dimensions.chartHeight;
+
+      ticks[i].setAttribute('transform', `translate(0, ${coord})`);
+    }
   }
 
   createYTicks() {
-    const comfortableTicks = 6;
-    const yTicksCount = Math.ceil((this.maximum - this.minimum) / comfortableTicks);
+    const requiredTicks = 6;
+    //const yTicksCount = Math.ceil((this.maximum - this.minimum) / comfortableTicks);
+    const yTickInterval = tickIncrement(this.minimum, this.maximum, requiredTicks);
+    const yTicksCount = Math.ceil((this.maximum - this.minimum) / yTickInterval);
 
-    if (this.yTicksCount && yTicksCount === this.yTicksCount) {
+    if (this.yTicksCount && yTickInterval * yTicksCount === this.yTicksCount) {
       return;
     }
 
-    this.yTicksCount = yTicksCount;
+    this.yTicksCount = yTickInterval * yTicksCount;
 
     let ticks = this.yAxisViewport.querySelectorAll('g');
     const shouldAnimate = ticks.length !== 0;
 
     for (let i = 0; i < ticks.length; i++) {
-      if (ticks && (Number(ticks[i].dataset.id) % yTicksCount !== 0) || this.maximum === -Infinity) {
-        // removeAnimation(ticks[i]);
-        this.yAxisViewport.removeChild(ticks[i]);
+      if (ticks && (Number(ticks[i].dataset.id) % yTickInterval !== 0) || this.maximum === -Infinity) {
+        removeAnimation(ticks[i]);
+        // this.yAxisViewport.removeChild(ticks[i]);
       }
     }
 
@@ -610,29 +634,20 @@ class TelegramChart {
       return;
     }
 
-    for (let i = 0; i < comfortableTicks; i++) {
-      const value = this.minimum + i * yTicksCount;
-      const tickIndex = findNode(ticks, tick => Number(tick.dataset.id) === value && !tick.dataset.animation);
+    for (let i = 0; i < yTicksCount; i++) {
+      const value = this.minimum + i * yTickInterval;
+      const tickIndex = findNode(ticks, tick => Number(tick.dataset.id) === value);
       let tick = ticks[tickIndex];
 
       if (!tick) {
         tick = this.createYTick(value);
 
-        // if (shouldAnimate) {
-        //   createAnimation(tick);
-        // }
+        if (shouldAnimate) {
+          createAnimation(tick);
+        }
 
         this.yAxisViewport.appendChild(tick);
       }
-    }
-
-    ticks = this.yAxisViewport.querySelectorAll('g');
-
-    for (let i = 0; i < ticks.length; i++) {
-      const index = Number(ticks[i].dataset.id);
-      const coord = (this.maximum - index) / (this.maximum - this.minimum) * this.dimensions.chartHeight;
-
-      ticks[i].setAttribute('transform', `translate(0, ${coord})`);
     }
   }
 
