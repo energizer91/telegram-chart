@@ -820,7 +820,7 @@ class TelegramChart {
   }
 
   renderInfo() {
-    if (this.selectedX < 0) {
+    if (this.selectedX < 0 || this.selectedX >= this.xAxis.length) {
       if (this.infoViewport) {
         this.infoViewport.style.opacity = 0;
       }
