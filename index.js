@@ -290,11 +290,11 @@ class TelegramChart {
 
     const feDropShadow = createElementNS('feDropShadow', {
       in: 'SourceGraphic',
-      'flood-color': '#98989D',
-      'flood-opacity': '0.5',
+      'flood-color': '#000000',
+      'flood-opacity': '0.25',
       stdDeviation: '1',
       dx: '0',
-      dy: '1',
+      dy: '0.5',
       result: 'dropShadow'
     });
 
@@ -320,7 +320,7 @@ class TelegramChart {
   createLinesViewport() {
     this.linesViewport = createElementNS('g', {
       fill: 'none',
-      'stroke-width': '3',
+      'stroke-width': '2',
       'stroke-linecap': 'round',
       'stroke-linejoin': 'round',
       // 'clip-path': 'url(#lines-clip)'
@@ -442,6 +442,10 @@ class TelegramChart {
   }
 
   createToggleCheckboxes() {
+    const checkboxContainer = createElement('div');
+    checkboxContainer.classList.add('chart__checks');
+    this.offsetContainer.appendChild(checkboxContainer);
+
     this.lines.forEach(line => {
       const label = createElement('label');
       const checkbox = createElement('input', {
@@ -465,7 +469,7 @@ class TelegramChart {
       label.appendChild(checkbox);
       label.appendChild(icon);
       label.appendChild(text);
-      this.offsetContainer.appendChild(label);
+      checkboxContainer.appendChild(label);
     });
   }
 
@@ -484,10 +488,10 @@ class TelegramChart {
     const rightOffset = this.dimensions.width * this.offsetRight;
     const width = rightOffset - leftOffset;
 
-    leftDrag.setAttribute('x', leftOffset + 4);
-    mainDrag.setAttribute('x', leftOffset + 2);
-    mainDrag.setAttribute('width', width - 4);
-    rightDrag.setAttribute('x', rightOffset - 7);
+    leftDrag.setAttribute('x', leftOffset);
+    mainDrag.setAttribute('x', leftOffset);
+    mainDrag.setAttribute('width', width);
+    rightDrag.setAttribute('x', rightOffset - 3);
     leftSpacer.setAttribute('width', leftOffset);
     rightSpacer.setAttribute('x', rightOffset);
     rightSpacer.setAttribute('width', this.dimensions.width - width);
@@ -530,9 +534,9 @@ class TelegramChart {
       return;
     }
 
-    this.offsetWrapper.setAttribute('viewBox', `0,0,${this.dimensions.width},${50}`);
+    this.offsetWrapper.setAttribute('viewBox', `0,0,${this.dimensions.width},${38}`);
     this.offsetWrapper.setAttribute('width', this.dimensions.width);
-    this.offsetWrapper.setAttribute('height', '50');
+    this.offsetWrapper.setAttribute('height', '38');
   }
 
   setYAxisLengths() {
@@ -788,7 +792,7 @@ class TelegramChart {
     }
 
     if (this.offsetMaximum !== -Infinity && this.offsetMinimum !== Infinity) {
-      const coords = this.convertLine(line.data, this.dimensions.width, 50, this.offsetMaximum, this.offsetMinimum);
+      const coords = this.convertLine(line.data, this.dimensions.width, 38, this.offsetMaximum, this.offsetMinimum);
 
       line.offsetViewport.setAttribute('d', coords);
     }
@@ -842,11 +846,10 @@ class TelegramChart {
 
     this.lines.forEach(line => {
       const lineCircle = createElementNS('circle', {
-        r: '5px',
+        r: '4px',
         cx: '0',
-        fill: 'white',
         stroke: line.color,
-        'stroke-width': '3px'
+        'stroke-width': '2px'
       });
       lineCircle.classList.add('chart__info-circle');
       lineCircle.dataset.id = line.id;
@@ -858,19 +861,18 @@ class TelegramChart {
 
     const xInfoRect = createElementNS('rect', {
       'stroke-width': '1px',
-      fill: 'white',
       rx: '5',
       ry: '5',
       y: '1px',
-      x: '-20px'
+      x: '-25px'
     });
     xInfoRect.classList.add('chart__info-rect');
     xInfoG.appendChild(xInfoRect);
 
     const weekLabel = createElementNS('text', {
       fill: 'black',
-      y: '25px',
-      x: '-10px'
+      y: '19px',
+      x: '-17px'
     });
     weekLabel.classList.add('chart__info-week');
     xInfoG.appendChild(weekLabel);
@@ -968,7 +970,7 @@ class TelegramChart {
         }
 
         const column = 2 % (index + 1) - 1;
-        const x = -10 + Math.max(valuesLength, 40 * (index % 2));
+        const x = -17 + Math.max(valuesLength, 30 * (index % 2));
 
         elem.setAttribute('x', x + 'px');
         elem.setAttribute('y', (65 + 18 * column) + 'px');
@@ -1001,12 +1003,12 @@ class TelegramChart {
     const labelsBB = valuesG.getBBox();
 
     const infoRectWidth = Math.round(Math.max(weekBB.width, labelsBB.width) + 20);
-    const infoRectHeight = Math.round(weekBB.height + labelsBB.height + 22);
+    const infoRectHeight = Math.round(weekBB.height + labelsBB.height + 25);
 
-    if (offset + infoRectWidth - 20 > this.dimensions.chartWidth + this.chartPadding) {
-      xInfoWrapper.setAttribute('transform', `translate(${-offset + this.dimensions.chartWidth - infoRectWidth + this.chartPadding * 3}, 0)`);
-    } else if (offset - this.chartPadding * 2 < 0) {
-      xInfoWrapper.setAttribute('transform', `translate(${-offset + this.chartPadding * 3}, 0)`);
+    if (offset + infoRectWidth > this.dimensions.chartWidth + this.chartPadding * 3 + 5) {
+      xInfoWrapper.setAttribute('transform', `translate(${-offset + this.dimensions.chartWidth - infoRectWidth + this.chartPadding * 3 + 5}, 0)`);
+    } else if (offset - this.chartPadding * 3 - 5 < 0) {
+      xInfoWrapper.setAttribute('transform', `translate(${-offset + this.chartPadding * 3 + 5}, 0)`);
     } else {
       xInfoWrapper.removeAttribute('transform');
     }

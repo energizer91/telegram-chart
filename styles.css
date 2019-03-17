@@ -12,7 +12,8 @@ body {
 }
 
 .chart__title {
-    font-weight: bold;
+    font-size: 16px;
+    font-weight: 600;
     margin-left: 15px;
 }
 
@@ -29,7 +30,7 @@ body {
 }
 
 .chart__offset-wrapper {
-    height: 50px;
+    height: 38px;
     position: relative;
     width: 100%;
 }
@@ -51,38 +52,41 @@ body {
 .chart__offset-main-drag {
     height: 100%;
     stroke: rgba(222, 234, 244, 1);
-    stroke-width: 4px;
+    stroke-width: 1px;
 }
 
 .chart__offset-drag {
     width: 3px;
-    y: 2px;
-    height: 46px;
+    height: 38px;
     fill: rgba(222, 234, 244, 1);
 }
 
 .chart__offset-spacer {
-    fill: rgba(240, 248, 253, 0.7);
+    fill: rgba(245, 250, 253, 0.7);
 }
 
 .chart__info-line {
-    stroke: rgba(152, 152, 157, 0.4);
+    stroke: rgba(0, 56, 96, 0.12);
+}
+
+.chart__info-circle {
+    fill: white;
 }
 
 .chart__y-axis line {
     stroke-width: 1px;
-    stroke: rgba(152, 152, 157, 0.3);
+    stroke: rgba(0, 40, 60, 0.05);
 }
 
-.chart__y-line line {
-    stroke-width: 1px;
-    stroke: rgba(152, 152, 157, 0.4);
+.chart__y-line {
+    stroke: rgba(0, 54, 94, 0.075);
 }
 
 .chart__x-axis text, .chart__y-axis text {
     font-size: 10px;
     text-anchor: middle;
-    fill: rgba(152, 152, 157, 1);
+    fill: rgba(0, 29, 49, 0.4);
+    font-weight: 300;
 }
 
 .chart__y-axis text {
@@ -90,17 +94,23 @@ body {
 }
 
 .chart__info-rect {
+    fill: white;
     filter: url('#info-filter');
 }
 
+.chart__info-week {
+    font-size: 12px;
+    font-weight: 500;
+    color: #222222;
+}
+
 .chart__info-value {
-    font-weight: bold;
+    font-weight: 600;
     font-size: 14px;
 }
 
 .chart__info-label {
-    font-weight: 300;
-    font-size: 12px;
+    font-size: 10px;
 }
 
 .chart__y-axis g {
@@ -134,17 +144,22 @@ body {
     transition: opacity 0.3s;
 }
 
+.chart__checks {
+    margin-top: 15px;
+}
+
 .chart__toggle-check {
     display: inline-block;
-    padding: 0 5px;
+    padding: 7px 14px 7px 8px;
     box-sizing: border-box;
-    border: 1px solid rgba(152, 152, 157, 0.4);
-    border-radius: 15px;
-    height: 30px;
+    border: 1px solid #ECF0F3;
+    border-radius: 18px;
+    height: 36px;
     vertical-align: middle;
     font-size: 12px;
-    line-height: 26px;
+    line-height: 18px;
     margin-right: 10px;
+    color: #43484B;
 }
 
 .chart__toggle-check input {
@@ -152,26 +167,23 @@ body {
 }
 
 .chart__toggle-check span {
-    margin: 0 5px;
+    margin-left: 10px;
     vertical-align: middle;
+    display: inline-block;
 }
 
 .chart__toggle-check-icon {
     display: inline-block;
-    height: 18px;
-    width: 18px;
+    height: 20px;
+    width: 20px;
     position: relative;
-    border-radius: 9px;
+    border-radius: 10px;
     vertical-align: middle;
 }
 
 .chart__toggle-check-icon:before, .chart__toggle-check-icon:after {
     content: '';
     position: absolute;
-    left: 2px;
-    top: 2px;
-    width: 14px;
-    height: 14px;
     transition: transform 0.3s;
     background-position: center;
     background-repeat: no-repeat;
@@ -179,11 +191,20 @@ body {
 }
 
 .chart__toggle-check-icon:before {
+    left: 4px;
+    top: 4px;
+    width: 12px;
+    height: 12px;
     background-image: url('check.svg');
 }
 
 .chart__toggle-check-icon:after {
-    background-image: url('none.svg');
+    left: 2px;
+    top: 2px;
+    width: 15px;
+    height: 15px;
+    background-color: white;
+    border-radius: 14px;
     transform: scale(0);
 }
 
@@ -192,4 +213,37 @@ body {
 }
 .chart__toggle-check_disabled .chart__toggle-check-icon:after {
     transform: scale(1);
+}
+
+body.night {
+    background-color: #242F3E;
+    color: white;
+}
+
+body.night .chart__y-axis line {
+    stroke: rgba(122, 132, 168, 0.14);
+}
+
+body.night .chart__y-line {
+    stroke: rgba(73, 91, 115, 0.3);
+}
+
+body.night .chart__info-line {
+    stroke: rgba(151, 189, 230, 0.4);
+}
+
+body.night .chart__x-axis text, body.night .chart__y-axis text {
+    fill: rgba(116, 138, 165, 0.6);
+}
+
+body.night .chart__info-circle {
+    fill: #242F3E;
+}
+
+body.night .chart__info-week {
+    fill: white;
+}
+
+body.night .chart__info-rect {
+    fill: #253241;
 }
