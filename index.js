@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
   fetch('chart_data.json')
     .then(data => data.json())
     .then(data => {
-      data.slice(0, 1).map((chartData, index) => {
+      data.map((chartData, index) => {
         return new TelegramChart(charts, chartData, {height: 300, title: 'Chart ' + (index + 1)});
       })
     })
@@ -252,8 +252,8 @@ class TelegramChart {
     this.createLinesViewport();
     this.createToggleCheckboxes();
 
-    this.offsetLeft = 0.5;
-    this.offsetRight = 0.8;
+    this.offsetLeft = 0.7;
+    this.offsetRight = 1;
     this.maximum = 0;
     this.minimum = 0;
     this.zoomRatio = 1;
@@ -667,6 +667,10 @@ class TelegramChart {
     this.createYTicks();
 
     const ticks = this.yAxisViewport.querySelectorAll('g');
+
+    if (this.maximum === -Infinity) {
+      return;
+    }
 
     for (let i = 0; i < ticks.length; i++) {
       const index = Number(ticks[i].dataset.id);
