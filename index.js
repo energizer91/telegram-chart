@@ -868,10 +868,9 @@ class TelegramChart {
 
     const x = this.chartPadding + -this.offsetLeft * this.dimensions.chartWidth * this.zoomRatio;
     const yZoom = (this.globalMaximum - this.globalMinimum) / (this.maximum - this.minimum);
-    const offset = 0;
 
-    this.linesViewport.setAttribute('transform', `translate(${x}, 0) scale(${this.zoomRatio}, 1)`);
-    this.zoomViewport.setAttribute('transform', `translate(0, ${offset}) scale(1, ${yZoom})`);
+    this.linesViewport.style.transform = `translate(${x}px, 0) scale(${this.zoomRatio}, 1)`;
+    this.zoomViewport.style.transform = `scale(1, ${yZoom})`;
   }
 
   renderLine(line) {
