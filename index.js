@@ -150,13 +150,10 @@ const createElement = (tag, attrs = {}) => {
 
 /**
  * Animations map
- * @type {Map<Node, {start: number, animationFn: Function, current: number, from: number, to: number, duration: number, callback: Function}>}
+ * @type {Map<Node, {start: number, style: string, current: number, from: number, to: number, duration: number, callback: Function}>}
  */
 const animations = new Map();
 const ease = t => t;
-const easeInQuad = t => t * t;
-const fadeIn = (from, result) => from + result;
-const fadeOut = (from, result) => from - result;
 
 function animationIterator() {
   if (!animations.size) {
@@ -166,12 +163,12 @@ function animationIterator() {
   const now = Date.now();
 
   for (let [node, data] of animations) {
-    const {start, duration, callback, animationFn, from} = data;
+    const {start, duration, callback, style, from, to} = data;
     const p = (now - start) / duration;
     const result = Math.min(ease(p), 1);
 
-    data.current = animationFn(from, result);
-    node.style.opacity = data.current;
+    data.current = from > to ? from - result : from + result;
+    node.style[style] = data.current;
 
     if (result >= 1) {
       animations.delete(node);
@@ -185,26 +182,29 @@ function animationIterator() {
   requestAnimationFrame(animationIterator);
 }
 
-const animate = (node, animationFn, from, to, duration = 300, callback) => {
+const animate = (node, style, from, to, duration = 300, callback) => {
   let animation = animations.get(node);
 
   if (animation) {
-    if (animationFn === animation.animationFn) {
+    if (style === animation.style && from === animation.from && to === animation.to) {
       return;
     }
+    const start = Date.now();
+
+    animation.duration = Math.max(animation.start - start + duration, 0);
     animation.start = Date.now();
-    animation.from = animation.current;
-    animation.animationFn = animationFn;
-    animation.duration = duration * (1 - animation.current);
+    animation.from = from;
+    animation.to = to;
     animation.callback = callback;
   } else {
     animation = {
       start: Date.now(),
-      animationFn,
+      style,
       duration,
       callback,
       current: from,
-      from
+      from,
+      to
     };
 
     animations.set(node, animation);
@@ -213,30 +213,8 @@ const animate = (node, animationFn, from, to, duration = 300, callback) => {
   requestAnimationFrame(animationIterator);
 };
 
-// const animate = (node, style, from, to, duration = 300) => {
-//   if (animations.has(node)) {
-//     return Promise.resolve();
-//   }
-//
-//   return new Promise((resolve) => {
-//     const start = Date.now();
-//
-//     const animationFrameFn = () => {
-//       const now = Date.now();
-//       const p = (now - start) / duration;
-//       const result = easeInQuad(p);
-//       node.style[style] = from > to ? from - to * result : from + to * result;
-//
-//       if (result >= 1) {
-//         return resolve(node);
-//       } else {
-//         requestAnimationFrame(animationFrameFn)
-//       }
-//     };
-//
-//     requestAnimationFrame(animationFrameFn);
-//   });
-// };
+const fadeIn = (node, duration, callback) => animate(node, 'opacity', 0, 1, duration, callback);
+const fadeOut = (node, duration, callback) => animate(node, 'opacity', 1, 0, duration, callback);
 
 const svgNS = 'http://www.w3.org/2000/svg';
 const findMaximum = array => array.reduce((acc, item) => item > acc ? item : acc, -Infinity);
@@ -717,6 +695,19 @@ class TelegramChart {
   }
 
   renderXAxis() {
+    this.renderXTicks();
+
+    const ticks = this.xAxisViewport.querySelectorAll('text');
+
+    for (let i = 0; i < ticks.length; i++) {
+      const index = (ticks[i].dataset.index);
+      const position = (index / (this.xAxis.length - 1) - this.offsetLeft) * this.dimensions.width * this.zoomRatio;
+
+      ticks[i].setAttribute('transform', `translate(${position}, 0)`);
+    }
+  }
+
+  renderXTicks() {
     let ticks = this.xAxisViewport.querySelectorAll('text');
     let needAnimation = false;
 
@@ -729,7 +720,7 @@ class TelegramChart {
       for (let i = 0; i < ticks.length; i++) {
         if (Number(ticks[i].dataset.index) % (2 ** tickInterval) !== 0) {
           // removeAnimation(ticks[i]);
-          animate(ticks[i], fadeOut, 1, 0, 300, node => node && node.remove());
+          fadeOut(ticks[i], 300, node => node && node.remove());
         }
       }
     }
@@ -745,35 +736,22 @@ class TelegramChart {
         continue;
       }
 
-      if (position >= 0 && position <= this.dimensions.width) {
-        const foundTick = findNode(ticks, tick => Number(tick.dataset.index) === newIndex);
+      const foundTick = findNode(ticks, tick => Number(tick.dataset.index) === newIndex);
+      let tick = ticks[foundTick];
 
-        if (foundTick < 0) {
-          const tick = this.createXTick(newIndex);
+      if (position >= 0 && position <= this.dimensions.width) {
+        if (!tick) {
+          tick = this.createXTick(newIndex);
 
           if (needAnimation) {
-            // createAnimation(tick);
-            animate(tick, fadeIn, 0, 1, 300);
+            fadeIn(tick);
           }
 
           this.xAxisViewport.appendChild(tick);
         }
-      } else {
-        const foundTick = findNode(ticks, tick => Number(tick.dataset.value) === value);
-
-        if (foundTick >= 0) {
-          this.xAxisViewport.removeChild(ticks[foundTick]);
-        }
+      } else if (tick) {
+        this.xAxisViewport.removeChild(tick);
       }
-    }
-
-    ticks = this.xAxisViewport.querySelectorAll('text');
-
-    for (let i = 0; i < ticks.length; i++) {
-      const index = (ticks[i].dataset.index);
-      const position = (index / (this.xAxis.length - 1) - this.offsetLeft) * this.dimensions.width * this.zoomRatio;
-
-      ticks[i].setAttribute('transform', `translate(${position}, 0)`);
     }
   }
 
@@ -818,9 +796,7 @@ class TelegramChart {
 
     for (let i = 0; i < ticks.length; i++) {
       if (ticks && (Number(ticks[i].dataset.id) % yTickInterval !== 0) || this.maximum === -Infinity) {
-        // removeAnimation(ticks[i]);
-        animate(ticks[i], fadeOut, 1, 0, 300, node => node && node.remove());
-        // this.yAxisViewport.removeChild(ticks[i]);
+        fadeOut(ticks[i], 300, node => node && node.remove());
       }
     }
 
@@ -837,8 +813,7 @@ class TelegramChart {
         tick = this.createYTick(value);
 
         if (shouldAnimate) {
-          // createAnimation(tick);
-          animate(tick, fadeIn, 0, 1, 300);
+          fadeIn(tick, 300);
         }
 
         this.yAxisViewport.appendChild(tick);
