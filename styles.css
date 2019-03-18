@@ -58,8 +58,12 @@ body {
 }
 
 .chart__viewport path {
-    transition: d 0.3s, opacity 0.3s ease-out;
+    transition: d 0.3s, opacity 0.3s;
     transform-origin: left center;
+}
+
+body.resize .chart__viewport path, body.resize .chart__offset-wrapper path {
+    transition-property: none;
 }
 
 .chart__offset-main-drag, .chart__offset-spacer {

@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
   fetch('chart_data.json')
     .then(data => data.json())
     .then(data => {
-      data.slice(0, 1).map((chartData, index) => {
+      data.map((chartData, index) => {
         return new TelegramChart(charts, chartData, {height: 300, title: 'Chart ' + (index + 1)});
       })
     })
@@ -307,8 +307,10 @@ class TelegramChart {
     });
 
     window.addEventListener('resize', () => {
+      document.body.classList.add('resize');
       this.setDimensions();
       this.render();
+      document.body.classList.remove('resize');
     });
 
     this.findMaximumAndMinimum();
@@ -325,7 +327,9 @@ class TelegramChart {
   }
 
   createViewport() {
-    this.viewport = createElementNS('svg');
+    this.viewport = createElementNS('svg', {
+      'preserveAspectRatio': 'xMinYMin meet'
+    });
     this.viewport.classList.add('chart__viewport');
     this.container.appendChild(this.viewport);
 
@@ -693,8 +697,6 @@ class TelegramChart {
 
   setViewportAttributes() {
     this.viewport.setAttribute('viewBox', `0,0,${this.dimensions.width},${this.dimensions.height}`);
-    this.viewport.setAttribute('width', this.dimensions.width);
-    this.viewport.setAttribute('height', this.dimensions.height);
 
     if (!this.offsetWrapper) {
       return;
@@ -994,6 +996,8 @@ class TelegramChart {
 
     this.infoViewport.setAttribute('transform', `translate(${offset}, 0)`);
 
+    let invisibleItems = 0;
+
     this.lines
       .forEach((line, index) => {
         const foundElem = findNode(elems, elem => elem.dataset.id === line.id);
@@ -1038,10 +1042,12 @@ class TelegramChart {
 
         if (!line.visible) {
           elem.remove();
+          invisibleItems--;
 
           return;
         }
 
+        const currentIndex = index + invisibleItems;
         const value = elem.querySelector('.chart__info-value');
         const label = elem.querySelector('.chart__info-label');
 
@@ -1049,15 +1055,19 @@ class TelegramChart {
           return line.data[this.selectedX];
         }
 
-        const column = 2 % (index + 1) - 1;
-        const x = -17 + Math.max(valuesLength, 30 * (index % 2));
+        const column = 2 % (currentIndex + 1) - 1;
+        const x = -17 + Math.max(valuesLength, 30 * (currentIndex % 2));
 
         elem.setAttribute('x', x + 'px');
         elem.setAttribute('y', (65 + 18 * column) + 'px');
         label.setAttribute('x', x + 'px');
         label.setAttribute('y', (80 + 18 * column) + 'px');
 
-        if ((index + 1) % 2 === 0) {
+        if (value.textContent !== String(line.data[this.selectedX])) {
+          value.textContent = line.data[this.selectedX];
+        }
+
+        if ((currentIndex + 1) % 2 === 0) {
           valuesLength = 0;
         } else {
           const elemLength = elem.getBBox().width + 10;
@@ -1066,10 +1076,6 @@ class TelegramChart {
             maxValuesLength = elemLength;
           }
           valuesLength += Math.max(elemLength, maxValuesLength);
-        }
-
-        if (value.textContent !== String(line.data[this.selectedX])) {
-          value.textContent = line.data[this.selectedX];
         }
 
         return line.data[this.selectedX];
