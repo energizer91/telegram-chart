@@ -925,7 +925,7 @@ class TelegramChart {
   }
 
   renderInfo() {
-    if (this.selectedX < 0 || this.selectedX >= this.xAxis.length) {
+    if (this.selectedX < 0 || this.selectedX >= this.xAxis.length || this.maximum === -Infinity) {
       if (this.infoViewport) {
         this.infoViewport.style.opacity = 0;
       }
