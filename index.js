@@ -253,11 +253,8 @@ class TelegramChart {
     });
 
     const resizeEvent = () => {
-
-      document.body.classList.add('resize');
       this.setDimensions();
       this.render();
-      document.body.classList.remove('resize');
     };
     if ('ResizeObserver' in window) {
 
@@ -413,6 +410,15 @@ class TelegramChart {
     });
     this.offsetLinesWrapper.classList.add('chart__offset-line-wrapper');
     this.offsetWrapper.appendChild(this.offsetLinesWrapper);
+
+    const bottomAnchor = createElementNS('circle', {
+      r: 0,
+      cx: 0,
+      cy: this.dimensions.offsetHeight
+    });
+
+    this.offsetLinesWrapper.style.transformOrigin = `left ${this.dimensions.offsetHeight}px`;
+    this.offsetLinesWrapper.appendChild(bottomAnchor);
 
     const leftSpacer = createElementNS('rect', {
       x: '0'
@@ -712,7 +718,7 @@ class TelegramChart {
       const index = (ticks[i].dataset.index);
       const position = (index / (this.xAxis.length - 1) - this.offsetLeft) * this.dimensions.width * this.zoomRatio;
 
-      ticks[i].style.transform = `translate(${position}px, 0)`;
+      ticks[i].setAttribute('transform', `translate(${position}, 0)`);
     }
   }
 
@@ -869,6 +875,10 @@ class TelegramChart {
     const x = this.chartPadding + -this.offsetLeft * this.dimensions.chartWidth * this.zoomRatio;
     const yZoom = (this.globalMaximum - this.globalMinimum) / (this.maximum - this.minimum);
 
+    if (yZoom === 0) {
+      return;
+    }
+
     this.linesViewport.style.transform = `translate(${x}px, 0) scale(${this.zoomRatio}, 1)`;
     this.zoomViewport.style.transform = `scale(1, ${yZoom})`;
   }
@@ -901,6 +911,14 @@ class TelegramChart {
 
   renderOffsetLines() {
     this.lines.forEach(line => this.renderOffsetLine(line));
+
+    const yZoom = (this.globalMaximum - this.globalMinimum) / (this.offsetMaximum - this.offsetMinimum);
+
+    if (yZoom === 0) {
+      return;
+    }
+
+    this.offsetLinesWrapper.style.transform = `scale(1, ${yZoom})`;
   }
 
   renderOffsetLine(line) {
@@ -917,13 +935,14 @@ class TelegramChart {
 
     if (!line.offsetViewport) {
       line.offsetViewport = createElementNS('path', {
-        stroke: line.color
+        stroke: line.color,
+        'vector-effect': 'non-scaling-stroke'
       });
       this.offsetLinesWrapper.appendChild(line.offsetViewport);
     }
 
     if (this.offsetMaximum !== -Infinity && this.offsetMinimum !== Infinity) {
-      const coords = this.convertLine(line.data, this.dimensions.width, this.dimensions.offsetHeight, this.offsetMaximum, this.offsetMinimum);
+      const coords = this.convertLine(line.data, this.dimensions.width, this.dimensions.offsetHeight, this.globalMaximum, this.globalMinimum);
 
       line.offsetViewport.setAttribute('d', coords);
     }

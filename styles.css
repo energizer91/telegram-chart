@@ -52,7 +52,12 @@ body {
     width: 100%;
 }
 
-.chart__offset-wrapper path {
+.chart__offset-line-wrapper {
+    transform-origin: left bottom;
+    transition: transform 0.3s;
+}
+
+.chart__offset-line-wrapper path {
     transition: opacity 0.3s;
     transform-origin: left center;
 }
@@ -65,10 +70,6 @@ body {
 .chart__zoom-viewport {
     transition: transform 0.3s;
     transform-origin: bottom;
-}
-
-body.resize .chart__viewport path, body.resize .chart__offset-wrapper path {
-    transition-property: none;
 }
 
 .chart__offset-main-drag, .chart__offset-spacer {
