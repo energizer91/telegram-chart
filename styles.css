@@ -102,6 +102,7 @@ body {
 
 .chart__info-circle {
     fill: white;
+    /*transition: transform 0.3s;*/
 }
 
 .chart__y-axis line {
@@ -124,6 +125,10 @@ body {
 
 .chart__y-axis text {
     text-anchor: start;
+}
+
+.chart__info-viewport {
+    transition: opacity 0.3s;
 }
 
 .chart__info-rect {
