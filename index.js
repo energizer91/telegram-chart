@@ -689,8 +689,7 @@ class TelegramChart {
       const index = (ticks[i].dataset.index);
       const position = (index / (this.xAxis.length - 1) - this.offsetLeft) * this.dimensions.width * this.zoomRatio;
 
-      // ticks[i].setAttribute('transform', `translate(${position}, 0)`);
-      ticks[i].style.transform = `translate(${position}px, 0)`;
+      ticks[i].setAttribute('transform', `translate(${position}, 0)`);
     }
   }
 
@@ -763,8 +762,7 @@ class TelegramChart {
       const index = Number(ticks[i].dataset.id);
       const coord = (this.maximum - index) / (this.maximum - this.minimum) * this.dimensions.chartHeight;
 
-      // ticks[i].setAttribute('transform', `translate(0, ${coord})`);
-      ticks[i].style.transform = `translate(0, ${coord}px)`;
+      ticks[i].setAttribute('transform', `translate(0, ${coord})`);
     }
   }
 
@@ -845,8 +843,7 @@ class TelegramChart {
     this.findMaximumAndMinimum();
     this.lines.forEach(line => this.renderLine(line));
 
-    // this.linesViewport.setAttribute('transform', `translate(${this.chartPadding + -this.offsetLeft * this.dimensions.chartWidth * this.zoomRatio}, 0) scale(${this.zoomRatio}, 1)`);
-    this.linesViewport.style.transform = `translate(${this.chartPadding + -this.offsetLeft * this.dimensions.chartWidth * this.zoomRatio}px, 0) scale(${this.zoomRatio}, 1)`;
+    this.linesViewport.setAttribute('transform', `translate(${this.chartPadding + -this.offsetLeft * this.dimensions.chartWidth * this.zoomRatio}, 0) scale(${this.zoomRatio}, 1)`);
   }
 
   renderLine(line, maximum = this.maximum, minimum = this.minimum) {
@@ -874,7 +871,7 @@ class TelegramChart {
       line.viewport.setAttribute('d', coords);
     }
 
-    line.viewport.style.transform = ``;
+    line.viewport.setAttribute('transform', ``);
   }
 
   renderOffsetLines() {
@@ -958,8 +955,7 @@ class TelegramChart {
     let valuesLength = 0;
     let maxValuesLength = 0;
 
-    this.infoViewport.style.transform = `translate(${offset}px, 0)`;
-    // this.infoViewport.setAttribute('transform', `translate(${offset}, 0)`);
+    this.infoViewport.setAttribute('transform', `translate(${offset}, 0)`);
 
     let invisibleItems = 0;
 
@@ -1057,11 +1053,11 @@ class TelegramChart {
     const infoRectHeight = Math.round(weekBB.height + labelsBB.height + 25);
 
     if (offset + infoRectWidth > this.dimensions.chartWidth + this.chartPadding * 3 + 5) {
-      xInfoWrapper.style.transform = `translate(${-offset + this.dimensions.chartWidth - infoRectWidth + this.chartPadding * 3 + 5}px, 0)`;
+      xInfoWrapper.setAttribute('transform', `translate(${-offset + this.dimensions.chartWidth - infoRectWidth + this.chartPadding * 3 + 5}, 0)`);
     } else if (offset - this.chartPadding * 3 - 5 < 0) {
-      xInfoWrapper.style.transform =  `translate(${-offset + this.chartPadding * 3 + 5}px, 0)`;
+      xInfoWrapper.setAttribute('transform', `translate(${-offset + this.chartPadding * 3 + 5}, 0)`);
     } else {
-      xInfoWrapper.style.transform = '';
+      xInfoWrapper.removeAttribute('transform');
     }
 
     xInfoRect.setAttribute('width', infoRectWidth + 'px');
