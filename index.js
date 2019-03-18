@@ -57,71 +57,6 @@ function tickIncrement(start, stop, count) {
   return -Math.pow(10, -power) / result;
 }
 
-const createAnimation = (node, duration = 300) => {
-  if (node.dataset.transition) {
-    return;
-  }
-
-  node.dataset.transition = 'true';
-  node.style.opacity = 0;
-
-  const start = Date.now();
-  const easeInQuad = t => t * t;
-  const animationFrameFn = () => {
-    const now = Date.now();
-    const p = (now - start) / duration;
-    const result = easeInQuad(p);
-    node.style.opacity = Math.min(result, 1);
-
-    if (result < 1) {
-      requestAnimationFrame(animationFrameFn);
-    } else {
-      delete node.dataset.transition;
-    }
-  };
-
-  requestAnimationFrame(animationFrameFn);
-
-  // node.animate({opacity: [1, 0]}, {duration});
-
-  // node.classList.add('showing');
-  //
-  // setTimeout(() => node && node.classList.remove('showing'), duration);
-};
-
-const removeAnimation = (node, duration = 300) => {
-  if (node.dataset.transition) {
-    return;
-  }
-
-  node.dataset.transition = 'true';
-
-  const start = Date.now();
-  const easeInQuad = t => t * t;
-  const animationFrameFn = () => {
-    const now = Date.now();
-    const p = (now - start) / duration;
-    const result = easeInQuad(p);
-    node.style.opacity = 1 - result;
-
-    if (result >= 1) {
-      node.remove();
-    } else {
-      requestAnimationFrame(animationFrameFn)
-    }
-  };
-
-  requestAnimationFrame(animationFrameFn);
-
-  // const anim = node.animate({opacity: [0, 1]}, {duration});
-  //
-  // anim.onfinish = () => node && node.remove();
-
-  // node.classList.add('hidden');
-  //
-  // setTimeout(() => node && node.remove(), duration);
-};
-
 // for creating svg elements
 const createElementNS = (tag, attrs = {}) => {
   const elem = document.createElementNS(svgNS, tag);
@@ -150,6 +85,7 @@ const createElement = (tag, attrs = {}) => {
 
 const ease = t => t;
 
+/** Special class for handling all animations on one animation frame */
 class Animations {
   constructor() {
     this.started = false;
@@ -693,6 +629,7 @@ class TelegramChart {
       .map(line => line.data.slice(Math.floor(this.offsetLeft * this.xAxis.length), Math.ceil(this.offsetRight * this.xAxis.length)));
     this.maximum = findMaximum(elements
       .map(line => findMaximum(line)));
+    // Finding minimum is disabled because on GIF chart was from 0
     // this.minimum = findMinimum(elements
     //   .map(line => findMinimum(line)));
 
@@ -704,6 +641,7 @@ class TelegramChart {
       .filter(line => line.visible)
       .map(line => line.data);
     this.offsetMaximum = findMaximum(elements.map(line => findMaximum(line)));
+    // Here we also removed finding minimum. Uncommenting these lines will work
     // this.offsetMinimum = findMinimum(elements.map(line => findMinimum(line)));
   }
 
