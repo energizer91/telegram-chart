@@ -53,13 +53,18 @@ body {
 }
 
 .chart__offset-wrapper path {
-    transition: d 0.3s, opacity 0.3s;
+    transition: opacity 0.3s;
     transform-origin: left center;
 }
 
 .chart__viewport path {
-    transition: d 0.3s, opacity 0.3s;
+    transition: opacity 0.3s;
     transform-origin: left center;
+}
+
+.chart__zoom-viewport {
+    transition: transform 0.3s;
+    transform-origin: bottom;
 }
 
 body.resize .chart__viewport path, body.resize .chart__offset-wrapper path {

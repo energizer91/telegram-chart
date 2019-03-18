@@ -234,6 +234,8 @@ class TelegramChart {
     this.zoomRatio = 1; // zoom ratio for main chart
     this.offsetMaximum = 0; // maximum y coord for zoom chart
     this.offsetMinimum = 0; // minimum y coord for zoom chart
+    this.globalMaximum = 0; // maximum y coord for zoom chart
+    this.globalMinimum = 0; // minimum y coord for zoom chart
 
     this.xAxis = data.columns.find(column => data.types[column[0]] === 'x').slice(1);
     this.lines = data.columns.filter(column => data.types[column[0]] === 'line').map(line => {
@@ -251,26 +253,27 @@ class TelegramChart {
     });
 
     const resizeEvent = () => {
+
       document.body.classList.add('resize');
       this.setDimensions();
       this.render();
       document.body.classList.remove('resize');
     };
-
     if ('ResizeObserver' in window) {
-      const ro = new ResizeObserver(resizeEvent);
 
+      const ro = new ResizeObserver(resizeEvent);
       ro.observe(document.body);
+
     } else {
       window.addEventListener('resize', resizeEvent);
     }
-
     window.addEventListener('resize', () => {
 
     });
 
     this.findMaximumAndMinimum();
     this.findOffsetMaximumAndMinimum();
+    this.findGlobalMaximumAndMinimum();
 
     this.createLinesViewport();
     this.createXAxis();
@@ -357,8 +360,20 @@ class TelegramChart {
       'stroke-linecap': 'round',
       'stroke-linejoin': 'round'
     });
+    this.zoomViewport = createElementNS('g');
+    this.zoomViewport.classList.add('chart__zoom-viewport');
     this.linesViewport.classList.add('chart__lines-viewport');
-    this.viewport.appendChild(this.linesViewport);
+
+    const anchor = createElementNS('circle', {
+      r: 0,
+      cx: 0,
+      cy: this.dimensions.chartHeight
+    });
+    this.zoomViewport.style.transformOrigin = `left ${this.dimensions.chartHeight}px`;
+
+    this.zoomViewport.appendChild(anchor);
+    this.viewport.appendChild(this.zoomViewport);
+    this.zoomViewport.appendChild(this.linesViewport);
   }
 
   createOffsetWrapper() {
@@ -641,6 +656,14 @@ class TelegramChart {
     this.zoomRatio = 1 / (this.offsetRight - this.offsetLeft);
   }
 
+  findGlobalMaximumAndMinimum() {
+    const elements = this.lines
+      .map(line => line.data);
+    this.globalMaximum = findMaximum(elements.map(line => findMaximum(line)));
+    // Here we also removed finding minimum. Uncommenting these lines will work
+    // this.globalMinimum = findMinimum(elements.map(line => findMinimum(line)));
+  }
+
   findOffsetMaximumAndMinimum() {
     const elements = this.lines
       .filter(line => line.visible)
@@ -843,10 +866,15 @@ class TelegramChart {
     this.findMaximumAndMinimum();
     this.lines.forEach(line => this.renderLine(line));
 
-    this.linesViewport.setAttribute('transform', `translate(${this.chartPadding + -this.offsetLeft * this.dimensions.chartWidth * this.zoomRatio}, 0) scale(${this.zoomRatio}, 1)`);
+    const x = this.chartPadding + -this.offsetLeft * this.dimensions.chartWidth * this.zoomRatio;
+    const yZoom = (this.globalMaximum - this.globalMinimum) / (this.maximum - this.minimum);
+    const offset = 0;
+
+    this.linesViewport.setAttribute('transform', `translate(${x}, 0) scale(${this.zoomRatio}, 1)`);
+    this.zoomViewport.setAttribute('transform', `translate(0, ${offset}) scale(1, ${yZoom})`);
   }
 
-  renderLine(line, maximum = this.maximum, minimum = this.minimum) {
+  renderLine(line) {
     if (!line.visible) {
       if (line.viewport) {
         line.viewport.style.opacity = 0;
@@ -866,7 +894,7 @@ class TelegramChart {
     }
 
     if (this.maximum !== -Infinity && this.minimum !== Infinity) {
-      const coords = this.convertLine(line.data, this.dimensions.chartWidth, this.dimensions.chartHeight, maximum, minimum);
+      const coords = this.convertLine(line.data, this.dimensions.chartWidth, this.dimensions.chartHeight, this.globalMaximum, this.globalMinimum);
 
       line.viewport.setAttribute('d', coords);
     }
@@ -908,8 +936,7 @@ class TelegramChart {
     return data
       .map((item, index) => {
         const x = (width / (data.length - 1) * index).toFixed(3);
-        const yZoom = height / (maximum - minimum);
-        const y = ((maximum - item) * yZoom).toFixed(3);
+        const y = ((maximum - item) / (maximum - minimum) * height).toFixed(3);
 
         if (index === 0) {
           return `M${x},${y}`;
