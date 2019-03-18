@@ -231,6 +231,7 @@ body {
     background-color: white;
     border-radius: 14px;
     transform: scale(0);
+    transition: transform 0.3s, background-color 0.3s;
 }
 
 .chart__toggle-check_disabled .chart__toggle-check-icon:before {

@@ -154,11 +154,15 @@ const createElement = (tag, attrs = {}) => {
  */
 const animations = new Map();
 const ease = t => t;
+let started = false;
 
 function animationIterator() {
   if (!animations.size) {
+    started = false;
     return;
   }
+
+  started = true;
 
   const now = Date.now();
 
@@ -210,7 +214,9 @@ const animate = (node, style, from, to, duration = 300, callback) => {
     animations.set(node, animation);
   }
 
-  requestAnimationFrame(animationIterator);
+  if (!started) {
+    requestAnimationFrame(animationIterator);
+  }
 };
 
 const fadeIn = (node, duration, callback) => animate(node, 'opacity', 0, 1, duration, callback);
@@ -449,6 +455,7 @@ class TelegramChart {
     let leftCoordinate = 0;
     let rightCoordinate = 0;
     let safetyZone = 10;
+    let offsetBorder = 0.07;
 
     const mouseDownHandler = e => {
       const x = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
@@ -477,21 +484,37 @@ class TelegramChart {
         if (leftDragging) {
           let newLeft = x - leftCoordinate;
 
-          if (newLeft < 0) {
-            newLeft = 0;
-          }
-
           this.offsetLeft = newLeft / this.dimensions.width;
         }
 
         if (rightDragging) {
           let newRight = x - rightCoordinate;
 
-          if (newRight > this.dimensions.width) {
-            newRight = this.dimensions.width;
-          }
-
           this.offsetRight = newRight / this.dimensions.width;
+        }
+
+        if (this.offsetRight - this.offsetLeft < offsetBorder) {
+          if (leftDragging) {
+            this.offsetRight = this.offsetLeft + offsetBorder;
+          } else if (rightDragging) {
+            this.offsetLeft = this.offsetRight - offsetBorder;
+          }
+        }
+
+        if (this.offsetRight < offsetBorder) {
+          this.offsetRight = offsetBorder;
+        }
+
+        if (this.offsetRight > 1) {
+          this.offsetRight = 1;
+        }
+
+        if (this.offsetLeft < 0) {
+          this.offsetLeft = 0;
+        }
+
+        if (this.offsetLeft > 1 - offsetBorder) {
+          this.offsetLeft = 1 - offsetBorder;
         }
 
         this.render();
