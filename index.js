@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
   fetch('chart_data.json')
     .then(data => data.json())
     .then(data => {
-      data.map((chartData, index) => {
+      data.slice(0, 1).map((chartData, index) => {
         return new TelegramChart(charts, chartData, {height: 300, title: 'Chart ' + (index + 1)});
       })
     })
