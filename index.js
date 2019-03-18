@@ -284,7 +284,9 @@ class TelegramChart {
 
   createViewport() {
     this.viewport = createElementNS('svg', {
-      'preserveAspectRatio': 'xMidYMid meet'
+      'preserveAspectRatio': 'xMidYMid meet',
+      xmlns: 'http://www.w3.org/2000/svg',
+      'xmlns:xlink': 'http://www.w3.org/1999/xlink'
     });
     this.viewport.classList.add('chart__viewport');
     this.container.appendChild(this.viewport);
@@ -365,7 +367,10 @@ class TelegramChart {
     this.offsetContainer.style.padding = `0 ${this.chartPadding}px`;
     this.container.appendChild(this.offsetContainer);
 
-    this.offsetWrapper = createElementNS('svg');
+    this.offsetWrapper = createElementNS('svg', {
+      xmlns: 'http://www.w3.org/2000/svg',
+      'xmlns:xlink': 'http://www.w3.org/1999/xlink'
+    });
     this.offsetWrapper.classList.add('chart__offset-wrapper');
     this.offsetContainer.appendChild(this.offsetWrapper);
 
