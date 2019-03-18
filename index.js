@@ -192,8 +192,6 @@ const animate = (node, animationFn, from, to, duration = 300, callback) => {
     if (animationFn === animation.animationFn) {
       return;
     }
-
-    console.log('change animation', animation.current, animation.from, animation.animationFn, animationFn);
     animation.start = Date.now();
     animation.from = animation.current;
     animation.animationFn = animationFn;
