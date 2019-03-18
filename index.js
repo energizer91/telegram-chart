@@ -364,14 +364,14 @@ class TelegramChart {
     this.zoomViewport.classList.add('chart__zoom-viewport');
     this.linesViewport.classList.add('chart__lines-viewport');
 
-    const anchor = createElementNS('circle', {
+    const bottomAnchor = createElementNS('circle', {
       r: 0,
       cx: 0,
       cy: this.dimensions.chartHeight
     });
     this.zoomViewport.style.transformOrigin = `left ${this.dimensions.chartHeight}px`;
 
-    this.zoomViewport.appendChild(anchor);
+    this.zoomViewport.appendChild(bottomAnchor);
     this.viewport.appendChild(this.zoomViewport);
     this.zoomViewport.appendChild(this.linesViewport);
   }
@@ -712,7 +712,7 @@ class TelegramChart {
       const index = (ticks[i].dataset.index);
       const position = (index / (this.xAxis.length - 1) - this.offsetLeft) * this.dimensions.width * this.zoomRatio;
 
-      ticks[i].setAttribute('transform', `translate(${position}, 0)`);
+      ticks[i].style.transform = `translate(${position}px, 0)`;
     }
   }
 
@@ -785,7 +785,7 @@ class TelegramChart {
       const index = Number(ticks[i].dataset.id);
       const coord = (this.maximum - index) / (this.maximum - this.minimum) * this.dimensions.chartHeight;
 
-      ticks[i].setAttribute('transform', `translate(0, ${coord})`);
+      ticks[i].style.transform = `translate(0, ${coord}px)`;
     }
   }
 
@@ -897,8 +897,6 @@ class TelegramChart {
 
       line.viewport.setAttribute('d', coords);
     }
-
-    line.viewport.setAttribute('transform', ``);
   }
 
   renderOffsetLines() {
