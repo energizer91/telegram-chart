@@ -723,8 +723,6 @@ class TelegramChart {
     }
 
     this.offsetWrapper.setAttribute('viewBox', `0,0,${this.dimensions.width},${this.dimensions.offsetHeight}`);
-    this.offsetWrapper.setAttribute('width', this.dimensions.width);
-    this.offsetWrapper.setAttribute('height', this.dimensions.offsetHeight);
   }
 
   setYAxisLengths() {
