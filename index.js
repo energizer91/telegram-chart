@@ -216,10 +216,10 @@ class TelegramChart {
     };
 
     this.createViewport();
+    this.createOffsetWrapper();
 
     this.setDimensions();
     this.createDefs();
-    this.createOffsetWrapper();
 
     this.xAxisViewport = null; // viewport for x axis
     this.yAxisViewport = null; // viewport for y axis
