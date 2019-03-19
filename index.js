@@ -267,9 +267,6 @@ class TelegramChart {
     } else {
       window.addEventListener('resize', resizeEvent);
     }
-    window.addEventListener('resize', () => {
-
-    });
 
     this.findMaximumAndMinimum();
     this.findOffsetMaximumAndMinimum();
