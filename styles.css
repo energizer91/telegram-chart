@@ -25,7 +25,7 @@ body {
 }
 
 .chart {
-    margin-bottom: 20px;
+    margin-bottom: 60px;
 }
 
 .chart__title {
@@ -276,11 +276,11 @@ body.night {
 }
 
 body.night .chart__y-axis line {
-    stroke: rgba(122, 132, 168, 0.14);
+    stroke: rgba(122, 132, 168, 0.2);
 }
 
 body.night .chart__y-line {
-    stroke: rgba(73, 91, 115, 0.3);
+    stroke: rgba(73, 91, 115, 0.4);
 }
 
 body.night .chart__info-line {
