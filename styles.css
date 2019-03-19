@@ -123,6 +123,14 @@ body {
     transition: fill 0.3s;
 }
 
+.chart__x-axis .chart__x-axis-start {
+    text-anchor: start;
+}
+
+.chart__x-axis .chart__x-axis-end {
+    text-anchor: end;
+}
+
 .chart__y-axis text {
     text-anchor: start;
 }

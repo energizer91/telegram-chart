@@ -702,7 +702,7 @@ class TelegramChart {
 
     for (let i = 0; i < ticks.length; i++) {
       const index = (ticks[i].dataset.index);
-      const position = (index / (this.xAxis.length - 1) - this.offsetLeft) * this.dimensions.width * this.zoomRatio;
+      const position = this.chartPadding + (index / (this.xAxis.length - 1) - this.offsetLeft) * this.dimensions.chartWidth * this.zoomRatio;
 
       ticks[i].setAttribute('transform', `translate(${position}, 0)`);
     }
@@ -712,7 +712,7 @@ class TelegramChart {
     let ticks = this.xAxisViewport.querySelectorAll('text');
     let needAnimation = false;
 
-    const comfortableCount = Math.floor(this.xAxis.length / 5);
+    const comfortableCount = Math.floor(this.xAxis.length / 6);
     const tickInterval = Math.ceil(Math.log2(comfortableCount / this.zoomRatio));
     const ticksCount = Math.ceil(this.xAxis.length / 2 ** tickInterval * this.zoomRatio);
 
@@ -720,7 +720,6 @@ class TelegramChart {
       needAnimation = true;
       for (let i = 0; i < ticks.length; i++) {
         if (Number(ticks[i].dataset.index) % (2 ** tickInterval) !== 0) {
-          // removeAnimation(ticks[i]);
           this.animations.fadeOut(ticks[i], 300, node => node && node.remove());
         }
       }
@@ -730,7 +729,7 @@ class TelegramChart {
 
     for (let i = 0; i < ticksCount; i++) {
       const newIndex = i * 2 ** tickInterval;
-      const position = (newIndex / (this.xAxis.length - 1) - this.offsetLeft) * this.dimensions.width * this.zoomRatio;
+      const position = this.chartPadding + (newIndex / (this.xAxis.length - 1) - this.offsetLeft) * this.dimensions.chartWidth * this.zoomRatio;
       const value = this.xAxis[newIndex];
 
       if (!value) {
@@ -740,7 +739,7 @@ class TelegramChart {
       const foundTick = findNode(ticks, tick => Number(tick.dataset.index) === newIndex);
       let tick = ticks[foundTick];
 
-      if (position >= 0 && position <= this.dimensions.width) {
+      if (position + this.chartPadding * 2 >= 0 && position - this.chartPadding <= this.dimensions.width) {
         if (!tick) {
           tick = this.createXTick(newIndex);
 
@@ -758,6 +757,15 @@ class TelegramChart {
 
   createXTick(index) {
     const tick = createElementNS('text');
+
+    if (index === 0) {
+      tick.classList.add('chart__x-axis-start');
+    }
+
+    if (index === this.xAxis.length - 1) {
+      tick.classList.add('chart__x-axis-end');
+    }
+
     tick.textContent = this.getDateLabel(this.xAxis[index]);
     tick.dataset.index = index;
 
