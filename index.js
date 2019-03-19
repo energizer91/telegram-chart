@@ -216,10 +216,10 @@ class TelegramChart {
     };
 
     this.createViewport();
-    this.createDefs();
-    this.createOffsetWrapper();
 
     this.setDimensions();
+    this.createDefs();
+    this.createOffsetWrapper();
 
     this.xAxisViewport = null; // viewport for x axis
     this.yAxisViewport = null; // viewport for y axis
@@ -380,17 +380,24 @@ class TelegramChart {
     this.offsetContainer.appendChild(this.offsetWrapper);
 
     const mainDrag = createElementNS('rect', {
-      fill: 'transparent'
+      fill: 'transparent',
+      height: this.dimensions.offsetHeight
     });
     mainDrag.classList.add('chart__offset-main-drag');
     this.offsetWrapper.appendChild(mainDrag);
 
-    const leftDrag = createElementNS('rect');
+    const leftDrag = createElementNS('rect', {
+      width: '3',
+      height: this.dimensions.offsetHeight
+    });
     leftDrag.classList.add('chart__offset-drag');
     leftDrag.classList.add('chart__offset-drag_left');
     this.offsetWrapper.appendChild(leftDrag);
 
-    const rightDrag = createElementNS('rect');
+    const rightDrag = createElementNS('rect', {
+      width: '3',
+      height: this.dimensions.offsetHeight
+    });
     rightDrag.classList.add('chart__offset-drag');
     rightDrag.classList.add('chart__offset-drag_right');
     this.offsetWrapper.appendChild(rightDrag);
@@ -406,13 +413,16 @@ class TelegramChart {
     this.offsetLinesWrapper.style.transformOrigin = `left ${this.dimensions.offsetHeight}px`;
 
     const leftSpacer = createElementNS('rect', {
-      x: '0'
+      x: '0',
+      height: this.dimensions.offsetHeight
     });
     leftSpacer.classList.add('chart__offset-spacer');
     leftSpacer.classList.add('chart__offset-spacer_left');
     this.offsetWrapper.appendChild(leftSpacer);
 
-    const rightSpacer = createElementNS('rect');
+    const rightSpacer = createElementNS('rect', {
+      height: this.dimensions.offsetHeight
+    });
     rightSpacer.classList.add('chart__offset-spacer');
     rightSpacer.classList.add('chart__offset-spacer_right');
     this.offsetWrapper.appendChild(rightSpacer);
@@ -873,8 +883,9 @@ class TelegramChart {
       return;
     }
 
-    this.linesViewport.style.transform = `translate(${x}px, 0) scale(${this.zoomRatio}, 1)`;
-    this.zoomViewport.style.transform = `scale(1, ${yZoom})`;
+    this.zoomViewport.style.transform = `scaleY(${yZoom})`;
+    this.linesViewport.setAttribute('transform', `translate(${x} 0) scale(${this.zoomRatio}, 1)`);
+    this.zoomViewport.setAttribute('transform', `scale(1 ${yZoom})`);
   }
 
   renderLine(line) {
@@ -912,6 +923,7 @@ class TelegramChart {
       return;
     }
 
+    this.offsetLinesWrapper.setAttribute('transform', `scale(1, ${yZoom})`);
     this.offsetLinesWrapper.style.transform = `scale(1, ${yZoom})`;
   }
 
@@ -954,7 +966,7 @@ class TelegramChart {
 
         return `L${x},${y}`;
       })
-      .join();
+      .join('');
   }
 
   toggleLine(label, line) {
