@@ -30,16 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
     })
 });
 
-const findNode = (ticks, fn) => {
-  for (let i = 0; i < ticks.length; i++) {
-    if (fn(ticks[i])) {
-      return i;
-    }
-  }
-
-  return -1;
-};
-
 const e10 = Math.sqrt(50);
 const e5 = Math.sqrt(10);
 const e2 = Math.sqrt(2);
