@@ -122,7 +122,7 @@ class Animations {
       const start = Date.now();
 
       animation.duration = Math.max(animation.start - start + duration, 0);
-      animation.start = Date.now();
+      animation.start = start;
       animation.from = animation.current;
       animation.to = to;
       animation.callback = callback;
@@ -156,7 +156,7 @@ class Animations {
 
 const svgNS = 'http://www.w3.org/2000/svg';
 const findMaximum = array => array.reduce((acc, item) => item > acc ? item : acc, -Infinity);
-const findMinimum = array => array.reduce((acc, item) => item < acc ? item : acc, Infinity);
+// const findMinimum = array => array.reduce((acc, item) => item < acc ? item : acc, Infinity);
 const months = [
   'Jan',
   'Feb',
@@ -764,7 +764,7 @@ class TelegramChart {
 
           this.xTicks.set(newIndex, tick);
           this.xAxisViewport.appendChild(tick);
-        } else if (this.animations.animations.has(tick)) {
+        } else if (this.animations.animations.has(tick) && needAnimation) {
           this.animations.fadeIn(tick);
         }
       } else if (tick) {
@@ -845,7 +845,7 @@ class TelegramChart {
 
         this.yAxisViewport.appendChild(tick);
       } else {
-        if (this.animations.animations.has(tick)) {
+        if (this.animations.animations.has(tick) && shouldAnimate) {
           this.animations.fadeIn(tick);
         }
       }
