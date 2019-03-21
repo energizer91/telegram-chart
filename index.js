@@ -97,7 +97,7 @@ class Animations {
       const p = (now - start) / duration;
       const result = Math.min(ease(p), 1);
 
-      data.current = from > to ? from - result : from + result;
+      data.current = from - (from - to) * result;
       node.style[style] = data.current;
 
       if (result >= 1) {
@@ -123,7 +123,7 @@ class Animations {
 
       animation.duration = Math.max(animation.start - start + duration, 0);
       animation.start = Date.now();
-      animation.from = from;
+      animation.from = animation.current;
       animation.to = to;
       animation.callback = callback;
     } else {
@@ -764,6 +764,8 @@ class TelegramChart {
 
           this.xTicks.set(newIndex, tick);
           this.xAxisViewport.appendChild(tick);
+        } else if (this.animations.animations.has(tick)) {
+          this.animations.fadeIn(tick);
         }
       } else if (tick) {
         tick.remove();
@@ -836,12 +838,16 @@ class TelegramChart {
         const tick = this.createYTick(value);
 
         if (shouldAnimate) {
-          this.animations.fadeIn(tick, 300);
+          this.animations.fadeIn(tick);
         }
 
         this.yTicks.set(value, tick);
 
         this.yAxisViewport.appendChild(tick);
+      } else {
+        if (this.animations.animations.has(tick)) {
+          this.animations.fadeIn(tick);
+        }
       }
     }
   }
