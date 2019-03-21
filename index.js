@@ -116,7 +116,7 @@ class Animations {
     let animation = this.animations.get(node);
 
     if (animation) {
-      if (style === animation.style && from === animation.from && to === animation.to) {
+      if (style === animation.style && to === animation.to) {
         return;
       }
       const start = Date.now();

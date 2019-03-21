@@ -50,6 +50,10 @@ body {
     height: 38px;
     position: relative;
     width: 100%;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .chart__offset-line-wrapper {
