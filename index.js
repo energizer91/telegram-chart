@@ -121,7 +121,7 @@ class Animations {
       }
       const start = Date.now();
 
-      animation.duration = Math.max(animation.start - start + duration, 0);
+      animation.duration = duration;
       animation.start = start;
       animation.from = animation.current;
       animation.to = to;
