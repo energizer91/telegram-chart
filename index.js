@@ -137,6 +137,8 @@ class Animations {
         to
       };
 
+      node.style[style] = from;
+
       this.animations.set(node, animation);
     }
 
