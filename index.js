@@ -459,15 +459,15 @@ class TelegramChart {
       this.selectedX = -1;
       const x = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
 
-      if ((x >= this.offsetLeft * this.dimensions.width - safetyZone) && (x < this.offsetRight * this.dimensions.width - safetyZone)) {
+      if ((x >= this.chartPadding + this.offsetLeft * this.dimensions.chartWidth - safetyZone) && (x < this.chartPadding + this.offsetRight * this.dimensions.chartWidth - safetyZone)) {
         e.stopPropagation();
         leftDragging = true;
-        leftCoordinate = x - this.offsetLeft * this.dimensions.width;
+        leftCoordinate = x - this.offsetLeft * this.dimensions.chartWidth;
       }
-      if ((x > this.offsetLeft * this.dimensions.width + safetyZone) && (x <= this.offsetRight * this.dimensions.width + safetyZone)) {
+      if ((x > this.chartPadding + this.offsetLeft * this.dimensions.chartWidth + safetyZone) && (x <= this.chartPadding + this.offsetRight * this.dimensions.chartWidth + safetyZone)) {
         e.stopPropagation();
         rightDragging = true;
-        rightCoordinate = x - this.offsetRight * this.dimensions.width;
+        rightCoordinate = x - this.offsetRight * this.dimensions.chartWidth;
       }
     };
     const mouseUpHandler = () => {
@@ -477,19 +477,21 @@ class TelegramChart {
       rightCoordinate = 0;
     };
     const mouseMoveHandler = e => {
-      const x = e.changedTouches && e.changedTouches.length ? e.changedTouches[0].clientX : e.clientX;
-
       if (leftDragging || rightDragging) {
+        e.stopPropagation();
+
+        const x = e.changedTouches && e.changedTouches.length ? e.changedTouches[0].clientX : e.clientX;
+
         if (leftDragging) {
           let newLeft = x - leftCoordinate;
 
-          this.offsetLeft = newLeft / this.dimensions.width;
+          this.offsetLeft = newLeft / this.dimensions.chartWidth;
         }
 
         if (rightDragging) {
           let newRight = x - rightCoordinate;
 
-          this.offsetRight = newRight / this.dimensions.width;
+          this.offsetRight = newRight / this.dimensions.chartWidth;
         }
 
         if (this.offsetRight - this.offsetLeft < offsetBorder) {
@@ -522,11 +524,11 @@ class TelegramChart {
 
     if ('ontouchstart' in window) {
       this.offsetWrapper.addEventListener('touchstart', e => mouseDownHandler(e));
-      this.offsetWrapper.addEventListener('touchmove', e => mouseMoveHandler(e));
+      this.offsetContainer.addEventListener('touchmove', e => mouseMoveHandler(e));
       document.addEventListener('touchend', () => mouseUpHandler());
     } else {
       this.offsetWrapper.addEventListener('mousedown', e => mouseDownHandler(e));
-      this.offsetWrapper.addEventListener('mousemove', e => mouseMoveHandler(e));
+      this.offsetContainer.addEventListener('mousemove', e => mouseMoveHandler(e));
       document.addEventListener('mouseup', () => mouseUpHandler());
     }
   }
