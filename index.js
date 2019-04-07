@@ -219,7 +219,7 @@ class TelegramChart {
     this.createOffsetWrapper();
 
     this.setDimensions();
-    this.createDefs();
+    // this.createDefs();
 
     this.xAxisViewport = null; // viewport for x axis
     this.yAxisViewport = null; // viewport for y axis
@@ -227,8 +227,8 @@ class TelegramChart {
     this.xTicksCount = 0; // count of y ticks
     this.yTicksCount = 0; // count of y ticks
     this.selectedX = -1; // selected x coord for info window
-    this.offsetLeft = 0.7; // zoom lower limit
-    this.offsetRight = 1; // zoom upper limit
+    this.offsetLeft = 0; // zoom lower limit
+    this.offsetRight = 0.3; // zoom upper limit
     this.maximum = 0; // maximum y coord
     this.minimum = 0; // minimum y coord
     this.zoomRatio = 1; // zoom ratio for main chart
@@ -236,6 +236,13 @@ class TelegramChart {
     this.offsetMinimum = 0; // minimum y coord for zoom chart
     this.globalMaximum = 0; // maximum y coord for zoom chart
     this.globalMinimum = 0; // minimum y coord for zoom chart
+
+    // styles
+    // this.pixelRatio = window.devicePixelRatio;
+    this.pixelRatio = 1;
+    this.mainLineWidth = 2 * this.pixelRatio;
+
+    this.needRedraw = true;
 
     this.infoData = {
       xLine: null,
@@ -267,10 +274,12 @@ class TelegramChart {
       };
     });
 
+    this.xInterval = this.xAxis[1] - this.xAxis[0];
+
     const resizeEvent = () => {
       this.setDimensions();
 
-      this.createLines();
+      // this.createLines();
       this.createOffsetLines();
       this.render();
     };
@@ -287,19 +296,27 @@ class TelegramChart {
     this.findOffsetMaximumAndMinimum();
     this.findGlobalMaximumAndMinimum();
 
-    this.createLinesViewport();
-    this.createXAxis();
-    this.createYAxis();
-    this.createLines();
+    // this.createLinesViewport();
+    // this.createXAxis();
+    // this.createYAxis();
+    // this.createLines();
     this.createOffsetLines();
     this.createToggleCheckboxes();
-    this.createInfo();
+    // this.createInfo();
 
     this.render();
+
+    requestAnimationFrame(() => this.renderCanvas());
+
     console.log(this);
   }
 
   createViewport() {
+    // this.viewport = createElementNS('svg', {
+    //   'preserveAspectRatio': 'xMidYMid slice',
+    //   xmlns: 'http://www.w3.org/2000/svg',
+    //   'xmlns:xlink': 'http://www.w3.org/1999/xlink'
+    // });
     this.viewport = createElement('canvas');
     this.viewport.classList.add('chart__viewport');
     this.container.appendChild(this.viewport);
@@ -317,7 +334,7 @@ class TelegramChart {
 
       this.selectedX = selectedX;
 
-      this.renderInfo();
+      // this.renderInfo();
     });
 
     document.addEventListener('mousemove', () => {
@@ -904,7 +921,10 @@ class TelegramChart {
   renderCanvasLines() {
     this.findMaximumAndMinimum();
 
+    this.context.lineWidth = this.mainLineWidth;
+    this.context.clearRect(0, 0, this.chartPadding * 2 + this.dimensions.chartWidth, this.dimensions.chartHeight);
 
+    this.lines.forEach(line => this.renderCanvasLine(line));
   }
 
   renderCanvasLine(line) {
@@ -916,30 +936,41 @@ class TelegramChart {
     const maximum = this.globalMaximum;
     const minimum = this.globalMinimum;
     const height = this.dimensions.chartHeight;
+    const width = this.dimensions.chartWidth;
 
-    line.data.forEach((item, index) => {
-      const x = (width / (line.data.length - 1) * index).toFixed(3);
-      const y = ((maximum - item) / (maximum - minimum) * height).toFixed(3);
-    })
-  }
+    const left = Math.floor(this.offsetLeft * line.data.length) - 1;
+    const right = Math.ceil(this.offsetRight * line.data.length) + 1;
 
-  createLines() {
-    this.lines.forEach(line => {
-      if (!line.viewport) {
-        line.viewport = createElementNS('path', {
-          stroke: line.color,
-          'vector-effect': 'non-scaling-stroke'
-        });
-        this.linesViewport.appendChild(line.viewport);
+    for (let i = left; i < right; i++) {
+      const offset = this.chartPadding - this.offsetLeft * width * this.zoomRatio;
+      const y = ((maximum - line.data[i]) / (maximum - minimum) * height);
+      const x = (width / (line.data.length - 1) * i * this.zoomRatio) + offset;
+
+      if (i === left) {
+        this.context.moveTo(x, y);
+      } else {
+        this.context.lineTo(x, y);
       }
+    }
 
-      this.renderLine(line);
-    });
+    // data.forEach((item, index) => {
+    //   const x = (width / (data.length - 1) * index);
+    //   const y = ((maximum - item) / (maximum - minimum) * height);
+    //
+    //   if (index === 0) {
+    //     this.context.moveTo(x, y);
+    //   }
+    //
+    //   this.context.lineTo(x, y);
+    // });
+
+    this.context.stroke();
   }
 
   renderLine(line) {
     if (this.maximum !== -Infinity && this.minimum !== Infinity) {
-      const coords = this.convertLine(line.data, this.dimensions.chartWidth, this.dimensions.chartHeight, this.globalMaximum, this.globalMinimum);
+      const data = line.data.slice(Math.floor(this.offsetLeft * line.data.length), Math.ceil(this.offsetRight * line.data.length));
+      const coords = this.convertLine(data, this.dimensions.chartWidth, this.dimensions.chartHeight, this.globalMaximum, this.globalMinimum);
 
       line.viewport.setAttribute('d', coords);
     }
@@ -1147,11 +1178,18 @@ class TelegramChart {
   }
 
   render() {
-    this.renderLines();
-    this.renderXAxis();
-    this.renderYAxis();
     this.renderOffsets();
     this.renderOffsetLines();
-    this.renderInfo();
+
+    this.needRedraw = true;
+  }
+
+  renderCanvas() {
+    if (this.needRedraw) {
+      this.needRedraw = false;
+      this.renderCanvasLines();
+    }
+
+    requestAnimationFrame(() => this.renderCanvas());
   }
 }
