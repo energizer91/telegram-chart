@@ -47,6 +47,8 @@ function tickIncrement(start, stop, count) {
   return -Math.pow(10, -power) / result;
 }
 
+const DURATION = 200;
+
 // for creating svg elements
 const createElementNS = (tag, attrs = {}) => {
   const elem = document.createElementNS(svgNS, tag);
@@ -74,6 +76,7 @@ const createElement = (tag, attrs = {}) => {
 };
 
 const ease = t => t;
+const easeDouble = t => t ** t;
 
 /** Special class for handling all animations on one animation frame */
 class Animations {
@@ -112,7 +115,7 @@ class Animations {
     requestAnimationFrame(() => this.animationIterator());
   }
 
-  animate(node, style, from, to, duration = 300, callback) {
+  animate(node, style, from, to, duration = DURATION, callback) {
     let animation = this.animations.get(node);
 
     if (animation) {
@@ -268,13 +271,11 @@ class TelegramChart {
         name: data.names[id],
         data: line.slice(1),
         color: data.colors[id],
-        viewport: null,
+        opacity: this.createAnimation(1, DURATION),
         offsetViewport: null,
         visible: true
       };
     });
-
-    this.xInterval = this.xAxis[1] - this.xAxis[0];
 
     const resizeEvent = () => {
       this.setDimensions();
@@ -309,6 +310,35 @@ class TelegramChart {
     requestAnimationFrame(() => this.renderCanvas());
 
     console.log(this);
+  }
+
+  createAnimation(value, duration) {
+    return {
+      from: value,
+      to: value,
+      value,
+      start: 0,
+      duration
+    };
+  }
+
+  animate(animation, to) {
+    animation.to = to;
+    animation.from = animation.value;
+    animation.start = Date.now();
+  }
+
+  updateAnimation(animation) {
+    if (animation.to === animation.value) {
+      return;
+    }
+
+    const p = (Date.now() - animation.start) / animation.duration;
+    const result = Math.min(ease(p), 1);
+
+    animation.value = animation.from - (animation.from - animation.to) * result;
+
+    return result;
   }
 
   createViewport() {
@@ -672,6 +702,7 @@ class TelegramChart {
   }
 
   findMaximumAndMinimum() {
+    const oldMaximum = this.maximum;
     const elements = this.lines
       .filter(line => line.visible)
       .map(line => line.data.slice(Math.floor(this.offsetLeft * this.xAxis.length), Math.ceil(this.offsetRight * this.xAxis.length)));
@@ -680,6 +711,12 @@ class TelegramChart {
     // Finding minimum is disabled because on GIF chart was from 0
     // this.minimum = findMinimum(elements
     //   .map(line => findMinimum(line)));
+
+    if (!this.maximumAnimation) {
+      this.maximumAnimation = this.createAnimation(this.maximum, DURATION);
+    } else if (oldMaximum !== this.maximum && this.maximum !== -Infinity) {
+      this.animate(this.maximumAnimation, this.maximum);
+    }
 
     this.zoomRatio = 1 / (this.offsetRight - this.offsetLeft);
   }
@@ -754,7 +791,7 @@ class TelegramChart {
       needAnimation = true;
       for (let [index, tick] of this.xTicks) {
         if (index % (2 ** tickInterval) !== 0) {
-          this.animations.fadeOut(tick, 300, () => {
+          this.animations.fadeOut(tick, DURATION, () => {
             tick.remove();
             this.xTicks.delete(index);
           });
@@ -840,10 +877,11 @@ class TelegramChart {
 
     for (let [index, tick] of this.yTicks) {
       if (this.yTicks.size && (index % yTickInterval !== 0) || this.maximum === -Infinity) {
-        this.animations.fadeOut(tick, 300, () => {
-          tick.remove();
-          this.yTicks.delete(index);
-        });
+        this.yTicks.delete(index);
+        // this.animations.fadeOut(tick, DURATION, () => {
+        //   tick.remove();
+        //   this.yTicks.delete(index);
+        // });
       }
     }
 
@@ -859,43 +897,53 @@ class TelegramChart {
         const tick = this.createYTick(value);
 
         if (shouldAnimate) {
-          this.animations.fadeIn(tick);
+          // this.animations.fadeIn(tick);
         }
 
         this.yTicks.set(value, tick);
 
-        this.yAxisViewport.appendChild(tick);
+        // this.yAxisViewport.appendChild(tick);
       } else {
         if (this.animations.animations.has(tick) && shouldAnimate) {
-          this.animations.fadeIn(tick);
+          // this.animations.fadeIn(tick);
         }
       }
     }
   }
 
   createYTick(value) {
-    const tick = createElementNS('g');
-    const tickLine = createElementNS('line', {
-      x1: this.chartPadding,
-      y1: '0',
-      x2: this.chartPadding + this.dimensions.chartWidth,
-      y2: '0'
-    });
-    const tickLabel = createElementNS('text', {
-      x: this.chartPadding,
-      y: '-5px'
-    });
-
-    if (value === this.minimum) {
-      tick.classList.add('.chart__y-line');
+    // const coord = (this.maximum - value) / (this.maximum - this.minimum) * this.dimensions.chartHeight;
+    //
+    // this.context.beginPath();
+    // this.context.moveTo(this.chartPadding, coord);
+    // this.context.lineTo(this.chartPadding + this.dimensions.chartWidth, coord);
+    // this.context.stroke();
+    return {
+      value,
+      animation: this.createAnimation()
     }
-
-    tickLabel.textContent = value;
-
-    tick.appendChild(tickLine);
-    tick.appendChild(tickLabel);
-
-    return tick;
+    // const tick = createElementNS('g');
+    // const tickLine = createElementNS('line', {
+    //   x1: this.chartPadding,
+    //   y1: '0',
+    //   x2: this.chartPadding + this.dimensions.chartWidth,
+    //   y2: '0'
+    // });
+    // const tickLabel = createElementNS('text', {
+    //   x: this.chartPadding,
+    //   y: '-5px'
+    // });
+    //
+    // if (value === this.minimum) {
+    //   tick.classList.add('.chart__y-line');
+    // }
+    //
+    // tickLabel.textContent = value;
+    //
+    // tick.appendChild(tickLine);
+    // tick.appendChild(tickLabel);
+    //
+    // return tick;
   }
 
   getDateLabel(time) {
@@ -928,13 +976,14 @@ class TelegramChart {
   }
 
   renderCanvasLine(line) {
+    this.context.globalAlpha = line.opacity.value;
     this.context.strokeStyle = line.color;
     this.context.beginPath();
     this.context.lineJoin = 'bevel';
     this.context.lineCap = 'butt';
 
-    const maximum = this.globalMaximum;
-    const minimum = this.globalMinimum;
+    const maximum = this.maximumAnimation.value;
+    const minimum = this.minimum;
     const height = this.dimensions.chartHeight;
     const width = this.dimensions.chartWidth;
 
@@ -1028,16 +1077,14 @@ class TelegramChart {
     line.visible = !line.visible;
 
     if (line.visible) {
-      if (line.viewport) {
-        line.viewport.style.opacity = '1';
-      }
+      this.animate(line.opacity, 1);
+
       if (line.offsetViewport) {
         line.offsetViewport.style.opacity = '1';
       }
     } else {
-      if (line.viewport) {
-        line.viewport.style.opacity = '0';
-      }
+      this.animate(line.opacity, 0);
+
       if (line.offsetViewport) {
         line.offsetViewport.style.opacity = '0';
       }
@@ -1185,6 +1232,17 @@ class TelegramChart {
   }
 
   renderCanvas() {
+    if (this.updateAnimation(this.maximumAnimation)) {
+      this.needRedraw = true;
+    }
+
+    for (let i = 0; i < this.lines.length; i++) {
+      if (this.updateAnimation(this.lines[i].opacity)) {
+        this.needRedraw = true;
+        break;
+      }
+    }
+
     if (this.needRedraw) {
       this.needRedraw = false;
       this.renderCanvasLines();
