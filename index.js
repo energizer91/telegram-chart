@@ -300,13 +300,11 @@ class TelegramChart {
   }
 
   createViewport() {
-    this.viewport = createElementNS('svg', {
-      'preserveAspectRatio': 'xMidYMid meet',
-      xmlns: 'http://www.w3.org/2000/svg',
-      'xmlns:xlink': 'http://www.w3.org/1999/xlink'
-    });
+    this.viewport = createElement('canvas');
     this.viewport.classList.add('chart__viewport');
     this.container.appendChild(this.viewport);
+
+    this.context = this.viewport.getContext('2d');
 
     this.viewport.addEventListener('mousemove', e => {
       e.stopPropagation();
@@ -695,7 +693,9 @@ class TelegramChart {
   }
 
   setViewportAttributes() {
-    this.viewport.setAttribute('viewBox', `0,0,${this.dimensions.width},${this.dimensions.height}`);
+    // this.viewport.setAttribute('viewBox', `0,0,${this.dimensions.width},${this.dimensions.height}`);
+    this.viewport.setAttribute('width', this.dimensions.width);
+    this.viewport.setAttribute('height', this.dimensions.height);
 
     if (!this.offsetWrapper) {
       return;
@@ -899,6 +899,28 @@ class TelegramChart {
     this.zoomViewport.style.transform = `scaleY(${yZoom})`;
     this.linesViewport.setAttribute('transform', `translate(${x} 0) scale(${this.zoomRatio}, 1)`);
     this.zoomViewport.setAttribute('transform', `scale(1 ${yZoom})`);
+  }
+
+  renderCanvasLines() {
+    this.findMaximumAndMinimum();
+
+
+  }
+
+  renderCanvasLine(line) {
+    this.context.strokeStyle = line.color;
+    this.context.beginPath();
+    this.context.lineJoin = 'bevel';
+    this.context.lineCap = 'butt';
+
+    const maximum = this.globalMaximum;
+    const minimum = this.globalMinimum;
+    const height = this.dimensions.chartHeight;
+
+    line.data.forEach((item, index) => {
+      const x = (width / (line.data.length - 1) * index).toFixed(3);
+      const y = ((maximum - item) / (maximum - minimum) * height).toFixed(3);
+    })
   }
 
   createLines() {

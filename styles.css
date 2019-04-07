@@ -5,7 +5,7 @@ html, body {
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, Helvetica, sans-serif;
     transition: background-color 0.3s, color 0.3s;
     min-height: 100vh;
 }
