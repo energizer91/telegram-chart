@@ -1,4 +1,27 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const chartsData = [
+    {
+      title: 'Users',
+      url: 'data/1/overview.json'
+    },
+    {
+      title: 'Reposts',
+      url: 'data/2/overview.json'
+    },
+    {
+      title: 'Fruits',
+      url: 'data/3/overview.json'
+    },
+    {
+      title: 'Views spread',
+      url: 'data/4/overview.json'
+    },
+    {
+      title: 'Also fruits',
+      url: 'data/5/overview.json'
+    }
+  ];
+
   const container = createElement('div');
   container.classList.add('container');
   const charts = document.createElement('div');
@@ -21,11 +44,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
   container.appendChild(nightButton);
 
-  fetch('chart_data.json')
-    .then(data => data.json())
-    .then(data => {
-      data.map((chartData, index) => {
-        return new TelegramChart(charts, chartData, {height: 300, title: 'Chart ' + (index + 1)});
-      })
-    })
+  chartsData.forEach(data => new TelegramChart(charts, data.url, {height: 300, title: data.title}));
 });
