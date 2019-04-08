@@ -196,16 +196,19 @@ class TelegramChart {
       .then(response => response.json())
       .then(data => {
         this.xAxis = data.columns.find(column => data.types[column[0]] === 'x').slice(1);
-        this.lines = data.columns.filter(column => data.types[column[0]] === 'line').map(line => this.convertLineData(data, line));
-        this.bars = data.columns.filter(column => data.types[column[0]] === 'bar').map(line => this.convertLineData(data, line));
-        this.areas = data.columns.filter(column => data.types[column[0]] === 'area').map(line => this.convertLineData(data, line));
+        const lines = data.columns.filter(column => data.types[column[0]] === 'line');
+        const bars = data.columns.filter(column => data.types[column[0]] === 'bar');
+        const areas = data.columns.filter(column => data.types[column[0]] === 'area');
 
-        if (this.bars.length) {
-          this.lines = this.bars;
-        }
-
-        if (this.areas.length) {
-          this.lines = this.areas;
+        if (lines.length) {
+          this.lines = lines.map(line => this.convertLineData(data, line));
+          this.chartType = 'lines';
+        } else if (bars.length) {
+          this.lines = bars.map(line => this.convertLineData(data, line));
+          this.chartType = 'bars';
+        } else if (areas.length) {
+          this.lines = areas.map(line => this.convertLineData(data, line));
+          this.chartType = 'areas';
         }
 
         this.yScaled = data.y_scaled;
@@ -216,9 +219,9 @@ class TelegramChart {
         this.findOffsetMaximumAndMinimum();
         this.findGlobalMaximumAndMinimum();
 
-        if (this.lines.length) {
-          this.createOffsetWrapper();
-          this.createOffsetLines();
+        this.createOffsetWrapper();
+        this.createOffsetLines();
+        if (this.lines.length > 1) {
           this.createToggleCheckboxes();
         }
 
