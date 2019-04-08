@@ -106,7 +106,6 @@ class TelegramChart {
     };
 
     this.createViewport();
-    this.createOffsetWrapper();
 
     this.setDimensions();
     // this.createDefs();
@@ -172,6 +171,22 @@ class TelegramChart {
     console.log(this);
   }
 
+  convertLineData(data, line) {
+    const id = line[0];
+
+    return {
+      id,
+      name: data.names[id],
+      data: line.slice(1),
+      color: data.colors[id],
+      opacity: this.createAnimation(1, DURATION),
+      offsetViewport: null,
+      maximum: 0,
+      minimum: 0,
+      visible: true
+    };
+  }
+
   getData(url) {
     if (!url) {
       throw new Error('Url is invalid');
@@ -181,29 +196,32 @@ class TelegramChart {
       .then(response => response.json())
       .then(data => {
         this.xAxis = data.columns.find(column => data.types[column[0]] === 'x').slice(1);
-        this.lines = data.columns.filter(column => data.types[column[0]] === 'line').map(line => {
-          const id = line[0];
+        this.lines = data.columns.filter(column => data.types[column[0]] === 'line').map(line => this.convertLineData(data, line));
+        this.bars = data.columns.filter(column => data.types[column[0]] === 'bar').map(line => this.convertLineData(data, line));
+        this.areas = data.columns.filter(column => data.types[column[0]] === 'area').map(line => this.convertLineData(data, line));
 
-          return {
-            id,
-            name: data.names[id],
-            data: line.slice(1),
-            color: data.colors[id],
-            opacity: this.createAnimation(1, DURATION),
-            offsetViewport: null,
-            maximum: 0,
-            minimum: 0,
-            visible: true
-          };
-        });
+        if (this.bars.length) {
+          this.lines = this.bars;
+        }
+
+        if (this.areas.length) {
+          this.lines = this.areas;
+        }
+
         this.yScaled = data.y_scaled;
+        this.percentage = data.percentage;
+        this.stacked = data.stacked;
 
         this.findMaximumAndMinimum();
         this.findOffsetMaximumAndMinimum();
         this.findGlobalMaximumAndMinimum();
 
-        this.createOffsetLines();
-        this.createToggleCheckboxes();
+        if (this.lines.length) {
+          this.createOffsetWrapper();
+          this.createOffsetLines();
+          this.createToggleCheckboxes();
+        }
+
         this.render();
 
         requestAnimationFrame(() => this.renderCanvas());
@@ -553,6 +571,10 @@ class TelegramChart {
   }
 
   renderOffsets() {
+    if (!this.offsetContainer) {
+      return;
+    }
+
     const {mainDrag, leftDrag, rightDrag, leftSpacer, rightSpacer} = this.offsetDrag;
 
     const leftOffset = this.dimensions.width * this.offsetLeft;
@@ -899,6 +921,10 @@ class TelegramChart {
   }
 
   renderOffsetLines() {
+    if (!this.offsetLinesWrapper) {
+      return;
+    }
+
     const yZoom = (this.globalMaximum - this.globalMinimum) / (this.offsetMaximum - this.offsetMinimum);
 
     if (yZoom === 0) {

@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
       url: 'data/1/overview.json'
     },
     {
-      title: 'Reposts',
+      title: 'Interactions',
       url: 'data/2/overview.json'
     },
     {
