@@ -191,9 +191,12 @@ class TelegramChart {
             color: data.colors[id],
             opacity: this.createAnimation(1, DURATION),
             offsetViewport: null,
+            maximum: 0,
+            minimum: 0,
             visible: true
           };
         });
+        this.yScaled = data.y_scaled;
 
         this.findMaximumAndMinimum();
         this.findOffsetMaximumAndMinimum();
@@ -568,14 +571,51 @@ class TelegramChart {
   findMaximumAndMinimum() {
     const oldMaximum = this.maximum;
     const oldMinimum = this.minimum;
-    const elements = this.lines
-      .filter(line => line.visible)
-      .map(line => line.data.slice(Math.floor(this.offsetLeft * this.xAxis.length), Math.ceil(this.offsetRight * this.xAxis.length)));
-    this.maximum = findMaximum(elements
-      .map(line => findMaximum(line)));
-    // Finding minimum is disabled because on GIF chart was from 0
-    this.minimum = findMinimum(elements
-      .map(line => findMinimum(line)));
+    const start = Math.floor(this.offsetLeft * this.xAxis.length);
+    const end = Math.ceil(this.offsetRight * this.xAxis.length);
+
+    this.maximum = -Infinity;
+    this.minimum = Infinity;
+
+    for (let l = 0; l < this.lines.length; l++) {
+      if (!this.lines[l].visible) {
+        continue;
+      }
+      let lineMaximum = -Infinity;
+      let lineMinimum = Infinity;
+      const oldLineMaximum = this.lines[l].maximum;
+      const oldLineMinimum = this.lines[l].minimum;
+
+      for (let i = start; i < end; i++) {
+        if (this.lines[l].data[i] > lineMaximum) {
+          lineMaximum = this.lines[l].data[i];
+        } else if (this.lines[l].data[i] < lineMinimum) {
+          lineMinimum = this.lines[l].data[i];
+        }
+      }
+
+      this.lines[l].maximum = lineMaximum;
+      this.lines[l].minimum = lineMinimum;
+
+      if (!this.lines[l].maximumAnimation) {
+        this.lines[l].maximumAnimation = this.createAnimation(this.lines[l].maximum);
+      } else if (oldLineMaximum !== this.lines[l].maximum && this.lines[l].maximum !== -Infinity) {
+        this.animate(this.lines[l].maximumAnimation, this.lines[l].maximum);
+      }
+
+      if (!this.lines[l].minimumAnimation) {
+        this.lines[l].minimumAnimation = this.createAnimation(this.lines[l].minimum);
+      } else if (oldLineMinimum !== this.lines[l].minimum && this.lines[l].minimum !== Infinity) {
+        this.animate(this.lines[l].minimumAnimation, this.lines[l].minimum);
+      }
+
+      if (lineMaximum > this.maximum) {
+        this.maximum = lineMaximum;
+      }
+      if (lineMinimum < this.minimum) {
+        this.minimum = lineMinimum;
+      }
+    }
 
     if (!this.maximumAnimation) {
       this.maximumAnimation = this.createAnimation(this.maximum);
@@ -763,10 +803,15 @@ class TelegramChart {
     this.context.lineJoin = 'bevel';
     this.context.lineCap = 'butt';
 
-    const maximum = this.maximumAnimation.value;
-    const minimum = this.minimumAnimation.value;
+    let maximum = this.maximumAnimation.value;
+    let minimum = this.minimumAnimation.value;
     const height = this.dimensions.chartHeight;
     const width = this.dimensions.chartWidth;
+
+    if (this.yScaled) {
+      maximum = line.maximumAnimation.value;
+      minimum = line.minimumAnimation.value;
+    }
 
     const left = Math.floor(this.offsetLeft * line.data.length) - 3;
     const right = Math.ceil(this.offsetRight * line.data.length) + 3;
@@ -1046,18 +1091,15 @@ class TelegramChart {
   }
 
   renderCanvas() {
-    if (this.updateAnimation(this.maximumAnimation)) {
-      this.needRedraw = true;
-    }
+    if (this.updateAnimation(this.maximumAnimation)) this.needRedraw = true;
 
-    if (this.updateAnimation(this.minimumAnimation)) {
-      this.needRedraw = true;
-    }
+    if (this.updateAnimation(this.minimumAnimation)) this.needRedraw = true;
 
     for (let i = 0; i < this.lines.length; i++) {
-      if (this.updateAnimation(this.lines[i].opacity)) {
-        this.needRedraw = true;
-      }
+      if (this.updateAnimation(this.lines[i].opacity)) this.needRedraw = true;
+
+      if (this.updateAnimation(this.lines[i].maximumAnimation)) this.needRedraw = true;
+      if (this.updateAnimation(this.lines[i].minimumAnimation)) this.needRedraw = true;
     }
 
     if (this.needRedraw) {
