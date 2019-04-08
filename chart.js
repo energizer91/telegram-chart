@@ -606,8 +606,13 @@ class TelegramChart {
     const start = Math.floor(this.offsetLeft * this.xAxis.length);
     const end = Math.ceil(this.offsetRight * this.xAxis.length);
 
-    this.maximum = -Infinity;
-    this.minimum = Infinity;
+    if (this.stacked || this.chartType === 'bars') {
+      this.maximum = 0;
+      this.minimum = 0;
+    } else {
+      this.maximum = -Infinity;
+      this.minimum = Infinity;
+    }
 
     for (let l = 0; l < this.lines.length; l++) {
       if (!this.lines[l].visible) {
@@ -615,19 +620,30 @@ class TelegramChart {
       }
       let lineMaximum = -Infinity;
       let lineMinimum = Infinity;
+
+      if (this.stacked || this.chartType === 'bars') {
+        lineMaximum = 0;
+        lineMinimum = 0;
+      }
+
       const oldLineMaximum = this.lines[l].maximum;
       const oldLineMinimum = this.lines[l].minimum;
 
       for (let i = start; i < end; i++) {
         if (this.lines[l].data[i] > lineMaximum) {
           lineMaximum = this.lines[l].data[i];
-        } else if (this.lines[l].data[i] < lineMinimum) {
+        } else if (!this.stacked && this.lines[l].data[i] < lineMinimum) {
           lineMinimum = this.lines[l].data[i];
         }
       }
 
-      this.lines[l].maximum = lineMaximum;
-      this.lines[l].minimum = lineMinimum;
+      if (this.stacked || this.chartType === 'bars') {
+        this.lines[l].minimum = this.maximum;
+        this.lines[l].maximum = lineMaximum + this.maximum;
+      } else {
+        this.lines[l].maximum = lineMaximum;
+        this.lines[l].minimum = lineMinimum;
+      }
 
       if (!this.lines[l].maximumAnimation) {
         this.lines[l].maximumAnimation = this.createAnimation(this.lines[l].maximum);
@@ -641,11 +657,16 @@ class TelegramChart {
         this.animate(this.lines[l].minimumAnimation, this.lines[l].minimum);
       }
 
-      if (lineMaximum > this.maximum) {
-        this.maximum = lineMaximum;
-      }
-      if (lineMinimum < this.minimum) {
-        this.minimum = lineMinimum;
+      if (this.stacked || this.chartType === 'bars') {
+        this.maximum += lineMaximum;
+        this.minimum = 0;
+      } else {
+        if (lineMaximum > this.maximum) {
+          this.maximum = lineMaximum;
+        }
+        if (lineMinimum < this.minimum) {
+          this.minimum = lineMinimum;
+        }
       }
     }
 
@@ -823,6 +844,7 @@ class TelegramChart {
   }
 
   renderCanvasLines() {
+    this.context.clearRect(0, 0, this.chartPadding * 2 + this.dimensions.chartWidth, this.dimensions.chartHeight);
     this.context.lineWidth = this.mainLineWidth;
 
     this.lines.forEach(line => this.renderCanvasLine(line));
@@ -831,17 +853,14 @@ class TelegramChart {
   renderCanvasLine(line) {
     if (!this.stacked) this.context.globalAlpha = line.opacity.value;
 
-    this.context.strokeStyle = line.color;
-    this.context.beginPath();
-    this.context.lineJoin = 'bevel';
-    this.context.lineCap = 'butt';
-
     let maximum = this.maximumAnimation.value;
     let minimum = this.minimumAnimation.value;
+    const overalMaximum = this.maximumAnimation.value;
+    const overalMinimum = this.minimumAnimation.value;
     const height = this.dimensions.chartHeight;
     const width = this.dimensions.chartWidth;
 
-    if (this.yScaled) {
+    if (this.yScaled || this.stacked) {
       maximum = line.maximumAnimation.value;
       minimum = line.minimumAnimation.value;
     }
@@ -849,19 +868,39 @@ class TelegramChart {
     const left = Math.floor(this.offsetLeft * line.data.length) - 3;
     const right = Math.ceil(this.offsetRight * line.data.length) + 3;
 
-    for (let i = left; i < right; i++) {
-      const offset = this.chartPadding - this.offsetLeft * width * this.zoomRatio;
-      const y = ((maximum - line.data[i]) / (maximum - minimum) * height);
-      const x = (width / (line.data.length - 1) * i * this.zoomRatio) + offset;
+    if (this.chartType === 'lines') {
+      this.context.strokeStyle = line.color;
+      this.context.beginPath();
+      this.context.lineJoin = 'bevel';
+      this.context.lineCap = 'butt';
 
-      if (i === left) {
-        this.context.moveTo(x, y);
-      } else {
-        this.context.lineTo(x, y);
+      for (let i = left; i < right; i++) {
+        const offset = this.chartPadding - this.offsetLeft * width * this.zoomRatio;
+        const y = ((maximum - line.data[i]) / (overalMaximum - overalMinimum) * height);
+        const x = (width / (line.data.length - 1) * i * this.zoomRatio) + offset;
+
+        if (i === left) {
+          this.context.moveTo(x, y);
+        } else {
+          this.context.lineTo(x, y);
+        }
       }
-    }
 
-    this.context.stroke();
+      this.context.stroke();
+    } else if (this.chartType === 'bars') {
+      this.context.fillStyle = line.color;
+      for (let i = left; i < right - 1; i++) {
+        const offset = this.chartPadding - this.offsetLeft * width * this.zoomRatio;
+        const y = ((maximum - line.data[i]) / (overalMaximum - minimum) * height);
+        const x = (width / (line.data.length - 1) * i * this.zoomRatio) + offset;
+        const nextX = (width / (line.data.length - 1) * (i + 1) * this.zoomRatio) + offset;
+        const nextY = ((maximum - line.data[(i + 1)]) / (overalMaximum - minimum) * height);
+
+        this.context.rect(x, y, nextX - x, nextY);
+      }
+
+      this.context.fill();
+    }
   }
 
   renderCanvasXTicks() {
@@ -888,7 +927,6 @@ class TelegramChart {
 
   renderCanvasYTicks() {
     this.renderYTicks();
-    this.context.clearRect(0, 0, this.chartPadding * 2 + this.dimensions.chartWidth, this.dimensions.chartHeight);
 
     this.context.fillStyle = 'rgba(37, 37, 41, 0.5)';
     this.context.strokeStyle = 'rgba(24, 45, 59, 0.1)';
@@ -1151,8 +1189,8 @@ class TelegramChart {
     if (this.needRedraw) {
       this.needRedraw = false;
       this.findMaximumAndMinimum();
-      this.renderCanvasYTicks();
       this.renderCanvasLines();
+      this.renderCanvasYTicks();
       this.renderCanvasXTicks();
     }
 
