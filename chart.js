@@ -984,7 +984,7 @@ class TelegramChart {
       }
     } else {
       if (!this.stacked) {
-        this.animate(line.opacity, 1);
+        this.animate(line.opacity, 0);
       } else {
         this.animate(line.height, 0);
       }
