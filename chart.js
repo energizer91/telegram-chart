@@ -174,17 +174,24 @@ class TelegramChart {
   convertLineData(data, line) {
     const id = line[0];
 
-    return {
+    const structure = {
       id,
       name: data.names[id],
       data: line.slice(1),
       color: data.colors[id],
-      opacity: this.createAnimation(1, DURATION),
       offsetViewport: null,
       maximum: 0,
       minimum: 0,
       visible: true
     };
+
+    if (this.stacked) {
+      structure.height = this.createAnimation(0, DURATION);
+    } else {
+      structure.opacity = this.createAnimation(1, DURATION);
+    }
+
+    return structure;
   }
 
   getData(url) {
@@ -195,6 +202,10 @@ class TelegramChart {
     fetch(url)
       .then(response => response.json())
       .then(data => {
+        this.yScaled = data.y_scaled;
+        this.percentage = data.percentage;
+        this.stacked = data.stacked;
+
         this.xAxis = data.columns.find(column => data.types[column[0]] === 'x').slice(1);
         const lines = data.columns.filter(column => data.types[column[0]] === 'line');
         const bars = data.columns.filter(column => data.types[column[0]] === 'bar');
@@ -210,10 +221,6 @@ class TelegramChart {
           this.lines = areas.map(line => this.convertLineData(data, line));
           this.chartType = 'areas';
         }
-
-        this.yScaled = data.y_scaled;
-        this.percentage = data.percentage;
-        this.stacked = data.stacked;
 
         this.findMaximumAndMinimum();
         this.findOffsetMaximumAndMinimum();
@@ -822,7 +829,8 @@ class TelegramChart {
   }
 
   renderCanvasLine(line) {
-    this.context.globalAlpha = line.opacity.value;
+    if (!this.stacked) this.context.globalAlpha = line.opacity.value;
+
     this.context.strokeStyle = line.color;
     this.context.beginPath();
     this.context.lineJoin = 'bevel';
@@ -965,13 +973,21 @@ class TelegramChart {
     line.visible = !line.visible;
 
     if (line.visible) {
-      this.animate(line.opacity, 1);
+      if (!this.stacked) {
+        this.animate(line.opacity, 1);
+      } else {
+        this.animate(line.height, 1);
+      }
 
       if (line.offsetViewport) {
         line.offsetViewport.style.opacity = '1';
       }
     } else {
-      this.animate(line.opacity, 0);
+      if (!this.stacked) {
+        this.animate(line.opacity, 1);
+      } else {
+        this.animate(line.height, 0);
+      }
 
       if (line.offsetViewport) {
         line.offsetViewport.style.opacity = '0';
@@ -1125,7 +1141,8 @@ class TelegramChart {
     if (this.updateAnimation(this.minimumAnimation)) this.needRedraw = true;
 
     for (let i = 0; i < this.lines.length; i++) {
-      if (this.updateAnimation(this.lines[i].opacity)) this.needRedraw = true;
+      if (!this.stacked && this.updateAnimation(this.lines[i].opacity)) this.needRedraw = true;
+      if (this.stacked && this.updateAnimation(this.lines[i].height)) this.needRedraw = true;
 
       if (this.updateAnimation(this.lines[i].maximumAnimation)) this.needRedraw = true;
       if (this.updateAnimation(this.lines[i].minimumAnimation)) this.needRedraw = true;
