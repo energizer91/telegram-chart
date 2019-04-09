@@ -215,13 +215,13 @@ class TelegramChart {
           this.chartType = 'areas';
         }
 
-        this.setDimensions();
-
         this.findMaximumAndMinimum();
         this.findOffsetMaximumAndMinimum();
         this.findGlobalMaximumAndMinimum();
 
         this.createOffsetWrapper();
+        this.setDimensions();
+        this.needOffsetRedraw = true;
         if (this.lines.length > 1) {
           this.createToggleCheckboxes();
         }
