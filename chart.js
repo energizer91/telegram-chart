@@ -592,7 +592,7 @@ class TelegramChart {
 
     for (let l = 0; l < this.lines.length; l++) {
       if (!this.lines[l].visible) continue;
-      maximums[l] = -Infinity;
+
       if (this.stacked) {
         maximums[l] = 0;
       } else {
