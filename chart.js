@@ -583,42 +583,72 @@ class TelegramChart {
     const oldMinimum = this[minimum].to;
     const fromZero = this.chartType === 'bars' || this.chartType === 'areas';
 
-    let newMaximum = -Infinity;
-    let newMinimum = Infinity;
+    let newMaximum;
+    let newMinimum;
 
-    if (fromZero) {
-      newMinimum = 0;
+    let maximumRow = -Infinity;
+    const maximums = new Array(this.lines.filter(line => line.visible).length);
+    const minimums = new Array(this.lines.filter(line => line.visible).length);
+
+    for (let l = 0; l < this.lines.length; l++) {
+      if (!this.lines[l].visible) continue;
+      maximums[l] = -Infinity;
+      if (this.stacked) {
+        maximums[l] = 0;
+      } else {
+        maximums[l] = -Infinity;
+      }
+      if (fromZero) {
+        minimums[l] = 0;
+      } else {
+        minimums[l] = Infinity;
+      }
+    }
+
+    for (let i = start; i < end; i++) {
+      let totalHeight = 0;
+
+      for (let l = 0; l < this.lines.length; l++) {
+        if (!this.lines[l].visible) continue;
+
+        if (this.lines[l].data[i] > maximums[l]) {
+          maximums[l] = this.lines[l].data[i];
+        }
+
+        if (!fromZero) {
+          if (this.lines[l].data[i] < minimums[l]) {
+            minimums[l] = this.lines[l].data[i];
+          }
+        }
+
+        totalHeight += this.lines[l].data[i];
+      }
+
+      if (totalHeight > maximumRow) {
+        maximumRow = totalHeight;
+      }
     }
 
     if (this.stacked) {
-      newMaximum = 0;
+      newMaximum = maximumRow;
+    } else {
+      newMaximum = maximums.reduce((acc, max) => max > acc ? max : acc);
+    }
+
+    if (!fromZero) {
+      newMinimum = minimums.reduce((acc, min) => min < acc ? min : acc);
+    } else {
+      newMinimum = 0;
     }
 
     for (let l = 0; l < this.lines.length; l++) {
-      if (!this.lines[l].visible) {
-        continue;
-      }
-      let lineMaximum = -Infinity;
-      let lineMinimum = Infinity;
-
-      if (fromZero) {
-        lineMinimum = 0;
-      }
-
-      if (this.stacked) {
-        lineMaximum = 0;
-      }
+      if (!this.lines[l].visible) continue;
 
       const oldLineMaximum = this.lines[l][maximum].to;
       const oldLineMinimum = this.lines[l][minimum].to;
 
-      for (let i = start; i < end; i++) {
-        if (this.lines[l].data[i] > lineMaximum) {
-          lineMaximum = this.lines[l].data[i];
-        } else if (!this.stacked && this.lines[l].data[i] < lineMinimum) {
-          lineMinimum = this.lines[l].data[i];
-        }
-      }
+      const lineMaximum = maximums[l];
+      const lineMinimum = minimums[l];
 
       if (!oldLineMaximum) {
         this.setAnimation(this.lines[l][maximum], lineMaximum);
@@ -626,20 +656,12 @@ class TelegramChart {
         this.animate(this.lines[l][maximum], lineMaximum);
       }
 
-      if (this.stacked) {
-        newMaximum += lineMaximum;
-      } else if (lineMaximum > newMaximum) {
-        newMaximum = lineMaximum;
-      }
 
       if (!fromZero) {
         if (!oldLineMinimum) {
           this.setAnimation(this.lines[l][minimum], lineMinimum);
         } else if (oldLineMinimum !== lineMinimum && lineMinimum !== Infinity) {
           this.animate(this.lines[l][minimum], lineMinimum);
-        }
-        if (lineMinimum < newMinimum) {
-          newMinimum = lineMinimum;
         }
       }
     }
