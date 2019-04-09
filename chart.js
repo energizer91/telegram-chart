@@ -904,8 +904,10 @@ class TelegramChart {
 
         // const h = prevLine ? ((maximum - prevLine.data[i]) / (overalMaximum - overalMinimum) * height) : height - y;
 
-        this.context.fillRect(x, y + h * (1 - zoom), w, h * zoom);
+        this.context.rect(x, y + h * (1 - zoom), w, h * zoom);
       }
+
+      this.context.fill();
     }
   }
 
