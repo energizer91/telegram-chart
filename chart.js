@@ -128,7 +128,7 @@ class TelegramChart {
     // this.pixelRatio = window.devicePixelRatio;
     this.pixelRatio = 1;
     this.mainLineWidth = 2 * this.pixelRatio;
-    this.gridLineWidth = 1 * this.pixelRatio;
+    this.gridLineWidth = this.pixelRatio;
 
     this.needRedraw = true;
 
@@ -174,8 +174,9 @@ class TelegramChart {
   convertLineData(data, line) {
     const id = line[0];
 
-    const structure = {
+    return {
       id,
+      opacity: this.createAnimation(1, DURATION),
       name: data.names[id],
       data: line.slice(1),
       color: data.colors[id],
@@ -184,14 +185,6 @@ class TelegramChart {
       minimum: 0,
       visible: true
     };
-
-    if (this.stacked) {
-      structure.height = this.createAnimation(1, DURATION);
-    } else {
-      structure.opacity = this.createAnimation(1, DURATION);
-    }
-
-    return structure;
   }
 
   getData(url) {
@@ -606,7 +599,7 @@ class TelegramChart {
     const start = Math.floor(this.offsetLeft * this.xAxis.length);
     const end = Math.ceil(this.offsetRight * this.xAxis.length);
 
-    if (this.stacked || this.chartType === 'bars') {
+    if (this.chartType === 'bars' || this.chartType === 'areas') {
       this.maximum = 0;
       this.minimum = 0;
     } else {
@@ -647,7 +640,9 @@ class TelegramChart {
         this.animate(this.lines[l].minimumAnimation, this.lines[l].minimum);
       }
 
-      if (lineMaximum > this.maximum) {
+      if (this.stacked) {
+        this.maximum += lineMaximum;
+      } else if (lineMaximum > this.maximum) {
         this.maximum = lineMaximum;
       }
       if (lineMinimum < this.minimum) {
@@ -836,19 +831,17 @@ class TelegramChart {
   }
 
   renderCanvasLine(line, index = 0) {
-    if (!this.stacked) {
-      this.context.globalAlpha = line.opacity.value;
-    } else {
-      this.context.globalAlpha = 1;
-    }
+    const opacity = line.opacity.value;
+    this.context.globalAlpha = 1;
 
-    if (this.stacked && !line.height.value) return;
-    if (!this.stacked && !line.opacity.value) return;
+    if (!line.opacity.value) return;
 
     let maximum = this.maximumAnimation.value;
     let minimum = this.minimumAnimation.value;
     const height = this.dimensions.chartHeight;
     const width = this.dimensions.chartWidth;
+    const offset = this.chartPadding - this.offsetLeft * width * this.zoomRatio;
+    const w = width / (line.data.length - 1) * this.zoomRatio;
 
     let left = Math.floor(this.offsetLeft * line.data.length) - 3;
     let right = Math.ceil(this.offsetRight * line.data.length) + 3;
@@ -861,16 +854,17 @@ class TelegramChart {
     if (left < 0) left = 0;
     if (right > line.data.length) right = line.data.length;
 
+    this.context.beginPath();
+
     if (this.chartType === 'lines') {
+      this.context.globalAlpha = line.opacity.value;
       this.context.strokeStyle = line.color;
-      this.context.beginPath();
       this.context.lineJoin = 'bevel';
       this.context.lineCap = 'butt';
 
       for (let i = left; i < right; i++) {
-        const offset = this.chartPadding - this.offsetLeft * width * this.zoomRatio;
         const y = ((maximum - line.data[i]) / (maximum - minimum) * height);
-        const x = (width / (line.data.length - 1) * i * this.zoomRatio) + offset;
+        const x = w * i + offset;
 
         if (i === left) {
           this.context.moveTo(x, y);
@@ -881,31 +875,29 @@ class TelegramChart {
 
       this.context.stroke();
     } else if (this.chartType === 'bars') {
-      const zoom = this.stacked ? line.height.value : 1;
       this.context.fillStyle = line.color;
 
       for (let i = left; i < right; i++) {
-        const offset = this.chartPadding - this.offsetLeft * width * this.zoomRatio;
-        const x = (width / (line.data.length - 1) * i * this.zoomRatio) + offset;
-        const w = width / (line.data.length - 1) * this.zoomRatio;
+        const x = w * i + offset;
 
         let value = line.data[i];
-        let bottom = 0;
+        let bottom = minimum;
 
-        for (let j = 0; j < index; j++) {
-          if (!this.lines[j].visible) continue;
+        if (this.stacked) {
+          for (let j = 0; j < index; j++) {
+            bottom += this.lines[j].data[i] * this.lines[j].opacity.value;
+          }
 
-          bottom = value;
-          value += this.lines[j].data[i];
+          value += bottom;
         }
 
-        let y = ((maximum - value) / (maximum - minimum) * height);
-        let h = height - ((maximum - value - bottom) / (maximum - minimum) * height);
+        const y = ((maximum - value) / (maximum - minimum) * height);
+        const h = ((maximum - bottom) / (maximum - minimum) * height) - y;
 
-        // const h = prevLine ? ((maximum - prevLine.data[i]) / (overalMaximum - overalMinimum) * height) : height - y;
-
-        this.context.fillRect(x, y + h * (1 - zoom), w, h * zoom);
+        this.context.rect(x, y + h * (1 - opacity), w, h * opacity);
       }
+
+      this.context.fill();
     }
   }
 
@@ -1017,21 +1009,13 @@ class TelegramChart {
     line.visible = !line.visible;
 
     if (line.visible) {
-      if (!this.stacked) {
-        this.animate(line.opacity, 1);
-      } else {
-        this.animate(line.height, 1);
-      }
+      this.animate(line.opacity, 1);
 
       if (line.offsetViewport) {
         line.offsetViewport.style.opacity = '1';
       }
     } else {
-      if (!this.stacked) {
-        this.animate(line.opacity, 0);
-      } else {
-        this.animate(line.height, 0);
-      }
+      this.animate(line.opacity, 0);
 
       if (line.offsetViewport) {
         line.offsetViewport.style.opacity = '0';
@@ -1185,8 +1169,7 @@ class TelegramChart {
     if (this.updateAnimation(this.minimumAnimation)) this.needRedraw = true;
 
     for (let i = 0; i < this.lines.length; i++) {
-      if (!this.stacked && this.updateAnimation(this.lines[i].opacity)) this.needRedraw = true;
-      if (this.stacked && this.updateAnimation(this.lines[i].height)) this.needRedraw = true;
+      if (this.updateAnimation(this.lines[i].opacity)) this.needRedraw = true;
 
       if (this.updateAnimation(this.lines[i].maximumAnimation)) this.needRedraw = true;
       if (this.updateAnimation(this.lines[i].minimumAnimation)) this.needRedraw = true;
