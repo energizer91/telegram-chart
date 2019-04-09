@@ -129,6 +129,10 @@ class TelegramChart {
 
     const resizeEvent = () => {
       this.setDimensions();
+      if (!this.lines.length) {
+        return;
+      }
+
       this.needOffsetRedraw = true;
 
       this.render();
@@ -193,7 +197,6 @@ class TelegramChart {
           this.chartType = 'areas';
         }
 
-        this.findMaximumAndMinimum();
         this.findOffsetMaximumAndMinimum();
 
         this.createOffsetWrapper();
@@ -578,13 +581,17 @@ class TelegramChart {
   findOverallMaximumAndMinimum(maximum = 'maximum', minimum = 'minimum', start, end) {
     const oldMaximum = this[maximum].to;
     const oldMinimum = this[minimum].to;
+    const fromZero = this.chartType === 'bars' || this.chartType === 'areas';
 
     let newMaximum = -Infinity;
     let newMinimum = Infinity;
 
-    if (this.chartType === 'bars' || this.chartType === 'areas') {
-      newMaximum = 0;
+    if (fromZero) {
       newMinimum = 0;
+    }
+
+    if (this.stacked) {
+      newMaximum = 0;
     }
 
     for (let l = 0; l < this.lines.length; l++) {
@@ -593,6 +600,14 @@ class TelegramChart {
       }
       let lineMaximum = -Infinity;
       let lineMinimum = Infinity;
+
+      if (fromZero) {
+        lineMinimum = 0;
+      }
+
+      if (this.stacked) {
+        lineMaximum = 0;
+      }
 
       const oldLineMaximum = this.lines[l][maximum].to;
       const oldLineMinimum = this.lines[l][minimum].to;
@@ -611,19 +626,21 @@ class TelegramChart {
         this.animate(this.lines[l][maximum], lineMaximum);
       }
 
-      if (!oldLineMinimum) {
-        this.setAnimation(this.lines[l][minimum], lineMinimum);
-      } else if (oldLineMinimum !== lineMinimum && lineMinimum !== Infinity) {
-        this.animate(this.lines[l][minimum], lineMinimum);
-      }
-
       if (this.stacked) {
         newMaximum += lineMaximum;
       } else if (lineMaximum > newMaximum) {
         newMaximum = lineMaximum;
       }
-      if (lineMinimum < newMinimum) {
-        newMinimum = lineMinimum;
+
+      if (!fromZero) {
+        if (!oldLineMinimum) {
+          this.setAnimation(this.lines[l][minimum], lineMinimum);
+        } else if (oldLineMinimum !== lineMinimum && lineMinimum !== Infinity) {
+          this.animate(this.lines[l][minimum], lineMinimum);
+        }
+        if (lineMinimum < newMinimum) {
+          newMinimum = lineMinimum;
+        }
       }
     }
 
@@ -633,10 +650,12 @@ class TelegramChart {
       this.animate(this[maximum], newMaximum);
     }
 
-    if (!oldMinimum) {
-      this.setAnimation(this[minimum], newMinimum);
-    } else if (oldMinimum !== newMinimum && newMinimum !== Infinity) {
-      this.animate(this[minimum], newMinimum);
+    if (!fromZero) {
+      if (!oldMinimum) {
+        this.setAnimation(this[minimum], newMinimum);
+      } else if (oldMinimum !== newMinimum && newMinimum !== Infinity) {
+        this.animate(this[minimum], newMinimum);
+      }
     }
   }
 
@@ -904,6 +923,7 @@ class TelegramChart {
       context.stroke();
     } else if (this.chartType === 'bars') {
       context.fillStyle = line.color;
+      // context.globalAlpha = 0.5;
 
       for (let i = left; i < right; i++) {
         const x = w * i + offset;
@@ -1123,6 +1143,7 @@ class TelegramChart {
   }
 
   render() {
+    this.findMaximumAndMinimum();
     this.renderOffsets();
 
     this.needRedraw = true;
@@ -1131,6 +1152,9 @@ class TelegramChart {
   renderCanvas() {
     if (this.updateAnimation(this.maximum)) this.needRedraw = true;
     if (this.updateAnimation(this.minimum)) this.needRedraw = true;
+
+    if (this.updateAnimation(this.offsetMaximum)) this.needOffsetRedraw = true;
+    if (this.updateAnimation(this.offsetMinimum)) this.needOffsetRedraw = true;
 
     for (let i = 0; i < this.lines.length; i++) {
       if (this.updateAnimation(this.lines[i].opacity)) {
@@ -1144,7 +1168,6 @@ class TelegramChart {
 
     if (this.needRedraw) {
       this.needRedraw = false;
-      this.findMaximumAndMinimum();
       this.renderCanvasLines();
       this.renderCanvasYTicks();
       this.renderCanvasXTicks();
