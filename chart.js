@@ -872,7 +872,9 @@ class TelegramChart {
     let maximum = this.offsetMaximum.value;
     let minimum = this.offsetMinimum.value;
 
-    this.lines.forEach((line, index) => {
+    for (let i = 0; i < this.lines.length; i++) {
+      const line = this.lines[i];
+
       if (this.yScaled) {
         maximum = line.offsetMaximum.value;
         minimum = line.offsetMinimum.value;
@@ -881,7 +883,7 @@ class TelegramChart {
       this.renderCanvasLine(
         this.offsetContext,
         line,
-        index,
+        i,
         this.dimensions.offsetHeight,
         1,
         0,
@@ -890,7 +892,7 @@ class TelegramChart {
         0,
         this.xAxis.length
       )
-    });
+    }
   }
 
   renderCanvasLine(context = this.context, line, index = 0, height, zoomRatio, offset, maximum, minimum, left, right) {
