@@ -44,11 +44,8 @@ const createElement = (tag, attrs = {}) => {
 };
 
 const ease = CubicBezier(0.25, 0.1, 0.25, 1.0);
-const linear = t => t;
 
 const svgNS = 'http://www.w3.org/2000/svg';
-const findMaximum = array => array.reduce((acc, item) => item > acc ? item : acc, -Infinity);
-const findMinimum = array => array.reduce((acc, item) => item < acc ? item : acc, Infinity);
 const months = [
   'Jan',
   'Feb',
