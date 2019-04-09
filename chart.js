@@ -46,29 +46,8 @@ const createElement = (tag, attrs = {}) => {
 const ease = CubicBezier(0.25, 0.1, 0.25, 1.0);
 
 const svgNS = 'http://www.w3.org/2000/svg';
-const months = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec'
-];
-const weeks = [
-  'Sun',
-  'Mon',
-  'Tue',
-  'Wen',
-  'Thu',
-  'Fri',
-  'Sat'
-];
+const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const weeks = ['Sun', 'Mon', 'Tue', 'Wen', 'Thu', 'Fri', 'Sat'];
 
 class TelegramChart {
   constructor(selector, url = '', params = {name: 'Default chart'}) {
