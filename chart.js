@@ -972,6 +972,54 @@ class TelegramChart {
       }
 
       context.fill();
+    } else if (this.chartType === 'areas') {
+      context.fillStyle = line.color;
+
+      for (let i = left; i < right; i++) {
+        const x = w * i + offset;
+
+        let value = line.data[i];
+        let bottom = minimum;
+
+        if (this.stacked) {
+          for (let j = 0; j < index; j++) {
+            bottom += this.lines[j].data[i] * this.lines[j].opacity.value;
+          }
+
+          value += bottom;
+        }
+
+        const y = ((maximum - value) / (maximum - minimum) * height);
+        const h = ((maximum - bottom) / (maximum - minimum) * height) - y;
+
+        if (i === left) {
+          context.moveTo(x, y + h * (1 - opacity));
+        } else {
+          context.lineTo(x, y + h * (1 - opacity));
+        }
+      }
+
+      for (let i = right - 1; i >= left; i--) {
+        const x = w * i + offset;
+
+        let value = line.data[i];
+        let bottom = minimum;
+
+        if (this.stacked) {
+          for (let j = 0; j < index; j++) {
+            bottom += this.lines[j].data[i] * this.lines[j].opacity.value;
+          }
+
+          value += bottom;
+        }
+
+        const h = ((maximum - bottom) / (maximum - minimum) * height);
+
+        context.lineTo(x, h);
+      }
+
+      context.closePath();
+      context.fill();
     }
   }
 
