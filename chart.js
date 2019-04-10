@@ -688,8 +688,7 @@ class TelegramChart {
   }
 
   setDimensions() {
-    // styles
-    // this.pixelRatio = window.devicePixelRatio;
+    // this.pixelRatio = window.devicePixelRatio || 1;
     this.pixelRatio = 1;
     this.mainLineWidth = 2 * this.pixelRatio;
     this.gridLineWidth = this.pixelRatio;
@@ -699,8 +698,8 @@ class TelegramChart {
       height: (this.params.height || this.container.clientHeight) * this.pixelRatio,
       chartHeight: ((this.params.height || this.container.clientHeight) - 25) * this.pixelRatio,
       chartWidth: ((this.params.width || this.container.clientWidth) - this.chartPadding * 2) * this.pixelRatio,
-      offsetWidth: (this.params.width || this.container.clientWidth) - this.chartPadding * 2,
       chartPadding: this.chartPadding * this.pixelRatio,
+      offsetWidth: (this.params.width || this.container.clientWidth) - this.chartPadding * 2,
       offsetHeight: 38
     };
 
@@ -758,10 +757,11 @@ class TelegramChart {
 
       if (position + this.chartPadding * 2 >= 0 && position - this.chartPadding <= this.dimensions.width) {
         if (!tick) {
-          const tick = this.createXTick(newIndex, needAnimation ? 0 : 1);
+          const tick = this.createXTick(newIndex);
 
           if (needAnimation) {
             // fade in animation
+            this.setAnimation(tick.opacity, 0);
             this.animate(tick.opacity, 1);
           }
 
@@ -777,12 +777,12 @@ class TelegramChart {
     }
   }
 
-  createXTick(index, opacity = 1) {
+  createXTick(index) {
     return {
       first: index === 0,
       last: index === this.xAxis.length - 1,
       value: this.getDateLabel(this.xAxis[index]),
-      opacity: this.createAnimation(opacity)
+      opacity: this.createAnimation(1)
     }
   }
 
@@ -812,9 +812,10 @@ class TelegramChart {
       const tick = this.yTicks.get(value);
 
       if (!tick) {
-        const tick = this.createYTick(value, shouldAnimate ? 0 : 1);
+        const tick = this.createYTick(value);
 
         if (shouldAnimate) {
+          this.setAnimation(tick.opacity, 0);
           this.animate(tick.opacity, 1);
           // this.animations.fadeIn(tick);
         }
@@ -831,12 +832,12 @@ class TelegramChart {
     }
   }
 
-  createYTick(value, opacity = 1) {
+  createYTick(value) {
     return {
       minimum: value === this.minimum.to,
       value: this.getYLabel(value),
       // value,
-      opacity: this.createAnimation(opacity)
+      opacity: this.createAnimation(1)
     }
   }
 

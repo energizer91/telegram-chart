@@ -125,7 +125,7 @@ body {
 
 .chart__y-axis line {
     stroke-width: 1px;
-    stroke: rgba(0, 40, 60, 0.05);
+    stroke: rgba(24, 45, 59, 0.1);
     transition: stroke 0.3s;
 }
 
@@ -136,7 +136,7 @@ body {
 .chart__x-axis text, .chart__y-axis text {
     font-size: 10px;
     text-anchor: middle;
-    fill: rgba(0, 29, 49, 0.4);
+    fill: #8E8E93;
     font-weight: 300;
     transition: fill 0.3s;
 }
