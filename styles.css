@@ -38,6 +38,10 @@ body {
     overflow-x: hidden;
 }
 
+.chart__viewport {
+    width: 100%;
+}
+
 .chart__lines-viewport {
     transform-origin: left center;
 }
@@ -82,7 +86,7 @@ body {
 
 .chart__offset-main-drag {
     height: 100%;
-    stroke: rgba(222, 234, 244, 1);
+    stroke: rgb(192,209,225);
     stroke-width: 1px;
     transition: stroke 0.3s;
     cursor: grabbing;
@@ -91,7 +95,7 @@ body {
 .chart__offset-drag {
     width: 3px;
     height: 38px;
-    fill: rgba(222, 234, 244, 1);
+    fill: rgb(192,209,225);
     transition: fill 0.3s;
     cursor: ew-resize;
 }
@@ -105,7 +109,7 @@ body {
 }
 
 .chart__offset-spacer {
-    fill: rgba(245, 250, 253, 0.7);
+    fill: rgba(226, 238, 249, 0.6);
     transition: fill 0.3s;
 }
 
@@ -335,15 +339,15 @@ body.night .chart__toggle-check {
 }
 
 body.night .chart__offset-main-drag {
-    stroke: #40566B;
+    stroke: #56626D;
 }
 
 body.night .chart__offset-drag {
-    fill: #40566B;
+    fill: #56626D;
 }
 
 body.night .chart__offset-spacer {
-    fill: rgba(27, 39, 55, 0.7);
+    fill: rgba(48, 66, 89, 0.6);
 }
 
 body.night .chart__toggle-check-icon:after {

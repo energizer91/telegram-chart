@@ -65,14 +65,6 @@ class TelegramChart {
     this.params = params;
     this.chartPadding = 10;
 
-    this.dimensions = {
-      width: this.params.width || this.container.clientWidth,
-      height: this.params.height || this.container.clientHeight,
-      chartHeight: (this.params.height || this.container.clientHeight) - 25,
-      chartWidth: (this.params.width || this.container.clientWidth) - this.chartPadding * 2,
-      offsetHeight: 38
-    };
-
     this.offsetDrag = {
       mainDrag: null,
       leftDrag: null,
@@ -99,12 +91,6 @@ class TelegramChart {
     this.minimum = this.createAnimation(0);
     this.offsetMaximum = this.createAnimation(0);
     this.offsetMinimum = this.createAnimation(0);
-
-    // styles
-    // this.pixelRatio = window.devicePixelRatio;
-    this.pixelRatio = 1;
-    this.mainLineWidth = 2 * this.pixelRatio;
-    this.gridLineWidth = this.pixelRatio;
 
     this.needRedraw = true;
     this.needOffsetRedraw = true;
@@ -391,15 +377,15 @@ class TelegramChart {
       this.selectedX = -1;
       const x = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
 
-      if ((x >= this.chartPadding + this.offsetLeft * this.dimensions.chartWidth - safetyZone) && (x < this.chartPadding + this.offsetRight * this.dimensions.chartWidth - safetyZone)) {
+      if ((x >= this.chartPadding + this.offsetLeft * this.dimensions.offsetWidth - safetyZone) && (x < this.chartPadding + this.offsetRight * this.dimensions.offsetWidth - safetyZone)) {
         e.stopPropagation();
         leftDragging = true;
-        leftCoordinate = x - this.offsetLeft * this.dimensions.chartWidth;
+        leftCoordinate = x - this.offsetLeft * this.dimensions.offsetWidth;
       }
-      if ((x > this.chartPadding + this.offsetLeft * this.dimensions.chartWidth + safetyZone) && (x <= this.chartPadding + this.offsetRight * this.dimensions.chartWidth + safetyZone)) {
+      if ((x > this.chartPadding + this.offsetLeft * this.dimensions.offsetWidth + safetyZone) && (x <= this.chartPadding + this.offsetRight * this.dimensions.offsetWidth + safetyZone)) {
         e.stopPropagation();
         rightDragging = true;
-        rightCoordinate = x - this.offsetRight * this.dimensions.chartWidth;
+        rightCoordinate = x - this.offsetRight * this.dimensions.offsetWidth;
       }
     };
     const mouseUpHandler = () => {
@@ -417,13 +403,13 @@ class TelegramChart {
         if (leftDragging) {
           let newLeft = x - leftCoordinate;
 
-          this.offsetLeft = newLeft / this.dimensions.chartWidth;
+          this.offsetLeft = newLeft / this.dimensions.offsetWidth;
         }
 
         if (rightDragging) {
           let newRight = x - rightCoordinate;
 
-          this.offsetRight = newRight / this.dimensions.chartWidth;
+          this.offsetRight = newRight / this.dimensions.offsetWidth;
         }
 
         if (this.offsetRight - this.offsetLeft < offsetBorder) {
@@ -565,8 +551,8 @@ class TelegramChart {
 
     const {mainDrag, leftDrag, rightDrag, leftSpacer, rightSpacer} = this.offsetDrag;
 
-    const leftOffset = this.dimensions.chartWidth * this.offsetLeft;
-    const rightOffset = this.dimensions.chartWidth * this.offsetRight;
+    const leftOffset = this.dimensions.offsetWidth * this.offsetLeft;
+    const rightOffset = this.dimensions.offsetWidth * this.offsetRight;
     const width = rightOffset - leftOffset;
 
     leftDrag.setAttribute('x', leftOffset);
@@ -575,7 +561,7 @@ class TelegramChart {
     rightDrag.setAttribute('x', rightOffset - 3);
     leftSpacer.setAttribute('width', leftOffset);
     rightSpacer.setAttribute('x', rightOffset);
-    rightSpacer.setAttribute('width', this.dimensions.chartWidth - rightOffset);
+    rightSpacer.setAttribute('width', this.dimensions.offsetWidth - rightOffset);
   }
 
   findOverallMaximumAndMinimum(maximum = 'maximum', minimum = 'minimum', start, end) {
@@ -641,6 +627,10 @@ class TelegramChart {
       newMinimum = 0;
     }
 
+    if (newMaximum === -Infinity || !newMaximum) {
+      return;
+    }
+
     for (let l = 0; l < this.lines.length; l++) {
       if (!this.lines[l].visible) continue;
 
@@ -698,8 +688,21 @@ class TelegramChart {
   }
 
   setDimensions() {
-    this.dimensions.width = this.container.clientWidth;
-    this.dimensions.chartWidth = this.dimensions.width - this.chartPadding * 2;
+    // styles
+    // this.pixelRatio = window.devicePixelRatio;
+    this.pixelRatio = 1;
+    this.mainLineWidth = 2 * this.pixelRatio;
+    this.gridLineWidth = this.pixelRatio;
+
+    this.dimensions = {
+      width: (this.params.width || this.container.clientWidth) * this.pixelRatio,
+      height: (this.params.height || this.container.clientHeight) * this.pixelRatio,
+      chartHeight: ((this.params.height || this.container.clientHeight) - 25) * this.pixelRatio,
+      chartWidth: ((this.params.width || this.container.clientWidth) - this.chartPadding * 2) * this.pixelRatio,
+      offsetWidth: (this.params.width || this.container.clientWidth) - this.chartPadding * 2,
+      chartPadding: this.chartPadding * this.pixelRatio,
+      offsetHeight: 38
+    };
 
     if (this.xAxis && this.xAxis.length) {
       this.fragmentWidth = this.dimensions.chartWidth / this.xAxis.length;
@@ -711,14 +714,15 @@ class TelegramChart {
   setViewportAttributes() {
     this.viewport.setAttribute('width', this.dimensions.width);
     this.viewport.setAttribute('height', this.dimensions.height);
+    this.viewport.style.height = this.dimensions.height / this.pixelRatio + 'px';
 
     if (!this.offsetWrapper) {
       return;
     }
 
-    this.offsetLinesWrapper.setAttribute('width', this.dimensions.chartWidth);
+    this.offsetLinesWrapper.setAttribute('width', this.dimensions.offsetWidth);
     this.offsetLinesWrapper.setAttribute('height', this.dimensions.offsetHeight);
-    this.offsetCanvas.setAttribute('width', this.dimensions.chartWidth);
+    this.offsetCanvas.setAttribute('width', this.dimensions.offsetWidth);
     this.offsetCanvas.setAttribute('height', this.dimensions.offsetHeight);
   }
 
@@ -784,8 +788,8 @@ class TelegramChart {
 
   renderYTicks() {
     const requiredTicks = 6;
-    const maximum = this.maximum.value;
-    const minimum = this.minimum.value;
+    const maximum = this.maximum.to;
+    const minimum = this.minimum.to;
     const yTickInterval = tickIncrement(minimum, maximum, requiredTicks);
     const yTicksCount = Math.ceil((maximum - minimum) / yTickInterval);
 
@@ -798,13 +802,9 @@ class TelegramChart {
     const shouldAnimate = this.yTicks.size !== 0;
 
     for (let [index, tick] of this.yTicks) {
-      if (this.yTicks.size && (index % yTickInterval !== 0) || maximum === -Infinity) {
+      if (this.yTicks.size && (index % yTickInterval !== 0) || maximum === -Infinity || maximum === 0) {
         this.animate(tick.opacity, 0);
       }
-    }
-
-    if (maximum === -Infinity) {
-      return;
     }
 
     for (let i = 0; i < yTicksCount; i++) {
@@ -835,6 +835,7 @@ class TelegramChart {
     return {
       minimum: value === this.minimum.to,
       value: this.getYLabel(value),
+      // value,
       opacity: this.createAnimation(opacity)
     }
   }
@@ -856,13 +857,14 @@ class TelegramChart {
   }
 
   renderCanvasLines() {
-    this.context.clearRect(0, 0, this.chartPadding * 2 + this.dimensions.chartWidth, this.dimensions.chartHeight);
+    this.context.clearRect(0, 0, this.dimensions.chartPadding * 2 + this.dimensions.chartWidth, this.dimensions.chartHeight);
     this.context.lineWidth = this.mainLineWidth;
-    const offset = this.chartPadding - this.offsetLeft * this.dimensions.chartWidth * this.zoomRatio;
+    const offset = this.dimensions.chartPadding - this.offsetLeft * this.dimensions.chartWidth * this.zoomRatio;
     let maximum = this.maximum.value;
     let minimum = this.minimum.value;
     let left = Math.floor(this.offsetLeft * this.xAxis.length) - 3;
     let right = Math.ceil(this.offsetRight * this.xAxis.length) + 3;
+    let w = this.fragmentWidth * this.zoomRatio;
 
     if (left < 0) left = 0;
     if (right > this.xAxis.length) right = this.xAxis.length;
@@ -878,7 +880,7 @@ class TelegramChart {
         line,
         index,
         this.dimensions.chartHeight,
-        this.zoomRatio,
+        w,
         offset,
         maximum,
         minimum,
@@ -889,10 +891,11 @@ class TelegramChart {
   }
 
   renderCanvasOffsetLines() {
-    this.offsetContext.clearRect(0, 0, this.dimensions.chartWidth, this.dimensions.offsetHeight);
+    this.offsetContext.clearRect(0, 0, this.dimensions.offsetWidth, this.dimensions.offsetHeight);
     this.offsetContext.lineWidth = this.gridLineWidth;
     let maximum = this.offsetMaximum.value;
     let minimum = this.offsetMinimum.value;
+    let w = this.fragmentWidth / this.pixelRatio;
 
     for (let i = 0; i < this.lines.length; i++) {
       const line = this.lines[i];
@@ -907,7 +910,7 @@ class TelegramChart {
         line,
         i,
         this.dimensions.offsetHeight,
-        1,
+        w,
         0,
         maximum,
         minimum,
@@ -917,13 +920,11 @@ class TelegramChart {
     }
   }
 
-  renderCanvasLine(context = this.context, line, index = 0, height, zoomRatio, offset, maximum, minimum, left, right) {
+  renderCanvasLine(context = this.context, line, index = 0, height, w, offset, maximum, minimum, left, right) {
     const opacity = line.opacity.value;
     context.globalAlpha = 1;
 
     if (!line.opacity.value) return;
-
-    const w = this.fragmentWidth * zoomRatio;
 
     context.beginPath();
 
@@ -975,14 +976,15 @@ class TelegramChart {
 
   renderCanvasXTicks() {
     this.renderXTicks();
-    this.context.clearRect(0, this.dimensions.chartHeight, this.dimensions.width, 25);
+    this.context.clearRect(0, this.dimensions.chartHeight, this.dimensions.width, 25 * this.pixelRatio);
+    this.context.font = `${10 * this.pixelRatio}px Helvetica, sans-serif`;
 
     for (let [index, tick] of this.xTicks) {
       if (tick.opacity.to === 0 && tick.opacity.value === 0) {
         this.xTicks.delete(index);
         continue;
       }
-      const position = this.chartPadding + (index / (this.xAxis.length - 1) - this.offsetLeft) * this.dimensions.chartWidth * this.zoomRatio;
+      const position = this.dimensions.chartPadding + (index / (this.xAxis.length - 1) - this.offsetLeft) * this.dimensions.chartWidth * this.zoomRatio;
       if (this.updateAnimation(tick.opacity)) this.needRedraw = true;
 
       this.renderCanvasXTick(index, tick, position);
@@ -992,7 +994,7 @@ class TelegramChart {
   renderCanvasXTick(index, tick, position) {
     this.context.globalAlpha = tick.opacity.value;
     this.context.fillStyle = 'rgba(37, 37, 41, 0.5)';
-    this.context.fillText(tick.value, position, this.dimensions.chartHeight + 15);
+    this.context.fillText(tick.value, position, this.dimensions.chartHeight + 15 * this.pixelRatio);
   }
 
   renderCanvasYTicks() {
@@ -1000,6 +1002,7 @@ class TelegramChart {
 
     this.context.fillStyle = 'rgba(37, 37, 41, 0.5)';
     this.context.strokeStyle = 'rgba(24, 45, 59, 0.1)';
+    this.context.font = `${10 * this.pixelRatio}px Helvetica, sans-serif`;
     this.context.lineWidth = this.gridLineWidth;
 
     for (let [index, tick] of this.yTicks) {
@@ -1019,9 +1022,9 @@ class TelegramChart {
   renderCanvasYTick(index, tick, coord) {
     this.context.globalAlpha = tick.opacity.value;
     this.context.beginPath();
-    this.context.fillText(tick.value, this.chartPadding, coord - 5);
-    this.context.moveTo(this.chartPadding, coord);
-    this.context.lineTo(this.dimensions.chartWidth + this.chartPadding, coord);
+    this.context.fillText(tick.value, this.dimensions.chartPadding, coord - 5 * this.pixelRatio);
+    this.context.moveTo(this.dimensions.chartPadding, coord);
+    this.context.lineTo(this.dimensions.chartWidth + this.dimensions.chartPadding, coord);
     this.context.stroke();
   }
 
