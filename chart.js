@@ -975,6 +975,20 @@ class TelegramChart {
     } else if (this.chartType === 'areas') {
       context.fillStyle = line.color;
 
+      const maximums = new Array(right - left);
+
+      if (this.percentage) {
+        for (let i = left; i < right; i++) {
+          maximums[i] = 0;
+
+          for (let j = 0; j < this.lines.length; j++) {
+            if (!this.lines[j].visible) continue;
+
+            maximums[i] += this.lines[j].data[i];
+          }
+        }
+      }
+
       for (let i = left; i < right; i++) {
         const x = w * i + offset;
 
@@ -989,8 +1003,13 @@ class TelegramChart {
           value += bottom;
         }
 
-        const y = ((maximum - value) / (maximum - minimum) * height);
-        const h = ((maximum - bottom) / (maximum - minimum) * height) - y;
+        let y = ((maximum - value) / (maximum - minimum) * height);
+        let h = ((maximum - bottom) / (maximum - minimum) * height) - y;
+
+        if (this.percentage) {
+          y = (maximums[i] - value) / maximums[i] * height;
+          h = ((maximums[i] - bottom) / maximums[i] * height) - y;
+        }
 
         if (i === left) {
           context.moveTo(x, y + h * (1 - opacity));
@@ -1013,7 +1032,11 @@ class TelegramChart {
           value += bottom;
         }
 
-        const h = ((maximum - bottom) / (maximum - minimum) * height);
+        let h = ((maximum - bottom) / (maximum - minimum) * height);
+
+        if (this.percentage) {
+          h = (maximums[i] - bottom) / maximums[i] * height;
+        }
 
         context.lineTo(x, h);
       }
