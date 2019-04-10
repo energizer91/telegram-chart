@@ -237,11 +237,20 @@ class TelegramChart {
   }
 
   createViewport() {
-    this.viewport = createElement('canvas');
+    this.viewport = createElementNS('svg', {
+      'preserveAspectRatio': 'xMidYMid meet',
+      xmlns: 'http://www.w3.org/2000/svg',
+      'xmlns:xlink': 'http://www.w3.org/1999/xlink'
+    });
     this.viewport.classList.add('chart__viewport');
+    this.linesWrapper = createElementNS('foreignObject');
+    this.canvas = document.createElementNS('http://www.w3.org/1999/xhtml', 'xhtml:canvas');
+
+    this.linesWrapper.appendChild(this.canvas);
+    this.viewport.appendChild(this.linesWrapper);
     this.container.appendChild(this.viewport);
 
-    this.context = this.viewport.getContext('2d');
+    this.context = this.canvas.getContext('2d');
 
     this.viewport.addEventListener('mousemove', e => {
       e.stopPropagation();
@@ -691,7 +700,7 @@ class TelegramChart {
     // this.pixelRatio = window.devicePixelRatio || 1;
     this.pixelRatio = 1;
     this.mainLineWidth = 2 * this.pixelRatio;
-    this.gridLineWidth = this.pixelRatio;
+    this.gridLineWidth = 1;
 
     this.dimensions = {
       width: (this.params.width || this.container.clientWidth) * this.pixelRatio,
@@ -711,9 +720,15 @@ class TelegramChart {
   }
 
   setViewportAttributes() {
-    this.viewport.setAttribute('width', this.dimensions.width);
-    this.viewport.setAttribute('height', this.dimensions.height);
-    this.viewport.style.height = this.dimensions.height / this.pixelRatio + 'px';
+    this.viewport.setAttribute('width', this.dimensions.width / this.pixelRatio);
+    this.viewport.setAttribute('height', this.dimensions.height / this.pixelRatio);
+
+    this.linesWrapper.setAttribute('width', this.dimensions.width / this.pixelRatio);
+    this.linesWrapper.setAttribute('height', this.dimensions.height / this.pixelRatio);
+    this.canvas.setAttribute('width', this.dimensions.width);
+    this.canvas.setAttribute('height', this.dimensions.height);
+
+    this.canvas.style.height = this.dimensions.height / this.pixelRatio + 'px';
 
     if (!this.offsetWrapper) {
       return;
