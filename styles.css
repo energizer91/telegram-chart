@@ -179,10 +179,6 @@ body {
     font-size: 10px;
 }
 
-.chart__y-axis g {
-    transition: transform 0.3s;
-}
-
 @keyframes showing {
     0% {
         opacity: 0

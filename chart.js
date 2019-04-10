@@ -76,7 +76,7 @@ class TelegramChart {
     this.createViewport();
 
     this.setDimensions();
-    // this.createDefs();
+    this.createDefs();
 
     this.infoViewport = null; // viewport for info window
     this.xTicksCount = 0; // count of y ticks
@@ -132,7 +132,6 @@ class TelegramChart {
       window.addEventListener('resize', resizeEvent);
     }
 
-    // this.createInfo();
     this.getData(this.url);
 
     console.log(this);
@@ -187,6 +186,12 @@ class TelegramChart {
 
         this.createOffsetWrapper();
         this.setDimensions();
+
+        this.createXAxis();
+        this.createYAxis();
+
+        this.createInfo();
+
         this.needOffsetRedraw = true;
         if (this.lines.length > 1) {
           this.createToggleCheckboxes();
@@ -252,7 +257,7 @@ class TelegramChart {
 
     this.context = this.canvas.getContext('2d');
 
-    this.viewport.addEventListener('mousemove', e => {
+    this.canvas.addEventListener('mousemove', e => {
       e.stopPropagation();
 
       const selectedX = Math.round((this.offsetLeft + e.clientX / (this.chartPadding + this.dimensions.chartWidth) * (this.offsetRight - this.offsetLeft)) * (this.xAxis.length - 1));
@@ -263,7 +268,7 @@ class TelegramChart {
 
       this.selectedX = selectedX;
 
-      // this.renderInfo();
+      this.renderInfo();
     });
 
     document.addEventListener('mousemove', () => {
@@ -324,6 +329,15 @@ class TelegramChart {
     this.offsetWrapper.classList.add('chart__offset-wrapper');
     this.offsetContainer.appendChild(this.offsetWrapper);
 
+    this.offsetLinesWrapper = createElementNS('foreignObject');
+    this.offsetLinesWrapper.classList.add('chart__offset-line-wrapper');
+    this.offsetWrapper.appendChild(this.offsetLinesWrapper);
+
+    this.offsetCanvas = document.createElementNS('http://www.w3.org/1999/xhtml', 'xhtml:canvas');
+    this.offsetLinesWrapper.appendChild(this.offsetCanvas);
+
+    this.offsetContext = this.offsetCanvas.getContext('2d');
+
     this.offsetDrag.mainDrag = createElementNS('rect', {
       fill: 'transparent',
       height: this.dimensions.offsetHeight
@@ -346,15 +360,6 @@ class TelegramChart {
     this.offsetDrag.rightDrag.classList.add('chart__offset-drag');
     this.offsetDrag.rightDrag.classList.add('chart__offset-drag_right');
     this.offsetWrapper.appendChild(this.offsetDrag.rightDrag);
-
-    this.offsetLinesWrapper = createElementNS('foreignObject');
-    this.offsetLinesWrapper.classList.add('chart__offset-line-wrapper');
-    this.offsetWrapper.appendChild(this.offsetLinesWrapper);
-
-    this.offsetCanvas = document.createElementNS('http://www.w3.org/1999/xhtml', 'xhtml:canvas');
-    this.offsetLinesWrapper.appendChild(this.offsetCanvas);
-
-    this.offsetContext = this.offsetCanvas.getContext('2d');
 
     this.offsetDrag.leftSpacer = createElementNS('rect', {
       x: '0',
@@ -490,6 +495,20 @@ class TelegramChart {
       label.appendChild(text);
       checkboxContainer.appendChild(label);
     });
+  }
+
+  createXAxis() {
+    this.xAxisViewport = createElementNS('g', {
+      transform: `translate(0, ${this.dimensions.chartHeight + 15})`
+    });
+    this.xAxisViewport.classList.add('chart__x-axis');
+    this.viewport.appendChild(this.xAxisViewport);
+  }
+
+  createYAxis() {
+    this.yAxisViewport = createElementNS('g');
+    this.yAxisViewport.classList.add('chart__y-axis');
+    this.viewport.appendChild(this.yAxisViewport);
   }
 
   createInfo() {
@@ -717,6 +736,7 @@ class TelegramChart {
     }
 
     this.setViewportAttributes();
+    this.setYAxisLengths();
   }
 
   setViewportAttributes() {
@@ -726,9 +746,9 @@ class TelegramChart {
     this.linesWrapper.setAttribute('width', this.dimensions.width / this.pixelRatio);
     this.linesWrapper.setAttribute('height', this.dimensions.height / this.pixelRatio);
     this.canvas.setAttribute('width', this.dimensions.width);
-    this.canvas.setAttribute('height', this.dimensions.height);
+    this.canvas.setAttribute('height', this.dimensions.chartHeight);
 
-    this.canvas.style.height = this.dimensions.height / this.pixelRatio + 'px';
+    this.canvas.style.height = this.dimensions.chartHeight / this.pixelRatio + 'px';
 
     if (!this.offsetWrapper) {
       return;
@@ -738,6 +758,18 @@ class TelegramChart {
     this.offsetLinesWrapper.setAttribute('height', this.dimensions.offsetHeight);
     this.offsetCanvas.setAttribute('width', this.dimensions.offsetWidth);
     this.offsetCanvas.setAttribute('height', this.dimensions.offsetHeight);
+  }
+
+  setYAxisLengths() {
+    if (!this.yAxisViewport) {
+      return;
+    }
+
+    const lines = this.yAxisViewport.querySelectorAll('line');
+
+    lines.forEach(line => {
+      line.setAttribute('x2', this.dimensions.chartWidth + this.chartPadding);
+    })
   }
 
   renderXTicks() {
@@ -781,25 +813,46 @@ class TelegramChart {
           }
 
           this.xTicks.set(newIndex, tick);
+          this.xAxisViewport.appendChild(tick.element);
         } else if (needAnimation) {
           // this.animations.fadeIn(tick);
           this.animate(tick.opacity, 1);
         }
       } else if (tick) {
         // forcely remove tick
+        tick.element.remove();
         this.xTicks.delete(newIndex);
       }
     }
   }
 
   createXTick(index) {
-    return {
-      first: index === 0,
-      last: index === this.xAxis.length - 1,
-      value: this.getDateLabel(this.xAxis[index]),
-      opacity: this.createAnimation(1)
+    const tick = createElementNS('text');
+
+    if (index === 0) {
+      tick.classList.add('chart__x-axis-start');
     }
+
+    if (index === this.xAxis.length - 1) {
+      tick.classList.add('chart__x-axis-end');
+    }
+
+    tick.textContent = this.getDateLabel(this.xAxis[index]);
+
+    return {
+      element: tick,
+      opacity: this.createAnimation(1)
+    };
   }
+
+  // createXTick(index) {
+  //   return {
+  //     first: index === 0,
+  //     last: index === this.xAxis.length - 1,
+  //     value: this.getDateLabel(this.xAxis[index]),
+  //     opacity: this.createAnimation(1)
+  //   }
+  // }
 
   renderYTicks() {
     const requiredTicks = 6;
@@ -837,7 +890,7 @@ class TelegramChart {
 
         this.yTicks.set(value, tick);
 
-        // this.yAxisViewport.appendChild(tick);
+        this.yAxisViewport.appendChild(tick.element);
       } else {
         if (shouldAnimate) {
           this.animate(tick.opacity, 1);
@@ -848,13 +901,41 @@ class TelegramChart {
   }
 
   createYTick(value) {
-    return {
-      minimum: value === this.minimum.to,
-      value: this.getYLabel(value),
-      // value,
-      opacity: this.createAnimation(1)
+    const tick = createElementNS('g');
+    const tickLine = createElementNS('line', {
+      x1: this.chartPadding,
+      y1: '0',
+      x2: this.chartPadding + this.dimensions.chartWidth,
+      y2: '0'
+    });
+    const tickLabel = createElementNS('text', {
+      x: this.chartPadding,
+      y: '-5px'
+    });
+
+    if (value === this.minimum) {
+      tick.classList.add('.chart__y-line');
     }
+
+    tickLabel.textContent = this.getYLabel(value);
+
+    tick.appendChild(tickLine);
+    tick.appendChild(tickLabel);
+
+    return {
+      element: tick,
+      opacity: this.createAnimation(1)
+    };
   }
+
+  // createYTick(value) {
+  //   return {
+  //     minimum: value === this.minimum.to,
+  //     value: this.getYLabel(value),
+  //     // value,
+  //     opacity: this.createAnimation(1)
+  //   }
+  // }
 
   getDateLabel(time) {
     const date = new Date(time);
@@ -1068,20 +1149,19 @@ class TelegramChart {
 
     for (let [index, tick] of this.xTicks) {
       if (tick.opacity.to === 0 && tick.opacity.value === 0) {
+        tick.element.remove();
         this.xTicks.delete(index);
+
         continue;
       }
       const position = this.dimensions.chartPadding + (index / (this.xAxis.length - 1) - this.offsetLeft) * this.dimensions.chartWidth * this.zoomRatio;
       if (this.updateAnimation(tick.opacity)) this.needRedraw = true;
 
-      this.renderCanvasXTick(index, tick, position);
+      // this.renderCanvasXTick(index, tick, position);
+      tick.element.setAttribute('transform', `translate(${position}, 0)`);
+      tick.element.style.transform = `translate(${position}px, 0)`;
+      tick.element.style.opacity = tick.opacity.value;
     }
-  }
-
-  renderCanvasXTick(index, tick, position) {
-    this.context.globalAlpha = tick.opacity.value;
-    this.context.fillStyle = 'rgba(37, 37, 41, 0.5)';
-    this.context.fillText(tick.value, position, this.dimensions.chartHeight + 15 * this.pixelRatio);
   }
 
   renderCanvasYTicks() {
@@ -1094,7 +1174,9 @@ class TelegramChart {
 
     for (let [index, tick] of this.yTicks) {
       if (tick.opacity.to === 0 && tick.opacity.value === 0) {
-        this.xTicks.delete(index);
+        tick.element.remove();
+        this.yTicks.delete(index);
+
         continue;
       }
       const maximum = this.maximum.value;
@@ -1102,17 +1184,12 @@ class TelegramChart {
       const coord = (maximum - index) / (maximum - minimum) * this.dimensions.chartHeight;
       if (this.updateAnimation(tick.opacity)) this.needRedraw = true;
 
-      this.renderCanvasYTick(index, tick, coord);
-    }
-  }
+      tick.element.setAttribute('transform', `translate(0, ${coord})`);
+      tick.element.style.transform = `translate(0, ${coord}px)`;
+      tick.element.style.opacity = tick.opacity.value;
 
-  renderCanvasYTick(index, tick, coord) {
-    this.context.globalAlpha = tick.opacity.value;
-    this.context.beginPath();
-    this.context.fillText(tick.value, this.dimensions.chartPadding, coord - 5 * this.pixelRatio);
-    this.context.moveTo(this.dimensions.chartPadding, coord);
-    this.context.lineTo(this.dimensions.chartWidth + this.dimensions.chartPadding, coord);
-    this.context.stroke();
+      // this.renderCanvasYTick(index, tick, coord);
+    }
   }
 
   toggleLine(label, line) {
@@ -1129,7 +1206,7 @@ class TelegramChart {
   }
 
   renderInfo() {
-    if (this.selectedX < 0 || this.selectedX >= this.xAxis.length || this.maximum === -Infinity) {
+    if (this.selectedX < 0 || this.selectedX >= this.xAxis.length || this.maximum.to === -Infinity) {
       if (this.infoViewport) {
         this.infoViewport.style.opacity = '0';
       }
@@ -1144,7 +1221,7 @@ class TelegramChart {
     const selectedElement = this.xAxis[this.selectedX];
 
     const week = new Date(selectedElement);
-    const label = `${weeks[week.getDay()]}, ${months[week.getMonth()]} ${week.getDate()}`;
+    const label = `${weeks[week.getDay()]}, ${week.getDate()} ${months[week.getMonth()]}`;
     const offset = this.chartPadding + (this.selectedX / (this.xAxis.length - 1) - this.offsetLeft) * this.dimensions.chartWidth * this.zoomRatio;
 
     let valuesLength = 0;
@@ -1183,11 +1260,11 @@ class TelegramChart {
             circle.style.opacity = '1';
           }
 
-          if (this.maximum === -Infinity) {
+          if (this.maximum.to === -Infinity) {
             return;
           }
 
-          const cy = (this.maximum - line.data[this.selectedX]) / (this.maximum - this.minimum) * this.dimensions.chartHeight;
+          const cy = (this.maximum.to - line.data[this.selectedX]) / (this.maximum.to - this.minimum.to) * this.dimensions.chartHeight;
 
           circle.setAttribute('cy', cy + 'px');
         }
@@ -1208,13 +1285,13 @@ class TelegramChart {
           return line.data[this.selectedX];
         }
 
-        const column = 2 % (currentIndex + 1) - 1;
+        const column = (currentIndex) / 2 ^ 0;
         const x = -17 + Math.max(valuesLength, 30 * (currentIndex % 2));
 
         elem.setAttribute('x', x + 'px');
-        elem.setAttribute('y', (65 + 18 * column) + 'px');
+        elem.setAttribute('y', (40 + 32 * column) + 'px');
         label.setAttribute('x', x + 'px');
-        label.setAttribute('y', (80 + 18 * column) + 'px');
+        label.setAttribute('y', (52 + 32 * column) + 'px');
 
         if (value.textContent !== String(line.data[this.selectedX])) {
           value.textContent = line.data[this.selectedX];
@@ -1259,6 +1336,7 @@ class TelegramChart {
   render() {
     this.findMaximumAndMinimum();
     this.renderOffsets();
+    this.renderInfo();
 
     this.needRedraw = true;
   }
