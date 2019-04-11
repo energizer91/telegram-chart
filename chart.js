@@ -625,6 +625,13 @@ class TelegramChart {
   }
 
   findOverallMaximumAndMinimum(maximum = 'maximum', minimum = 'minimum', start, end) {
+    if (this.percentage) {
+      this.setAnimation(this[maximum], 100);
+      this.setAnimation(this[minimum], 0);
+
+      return;
+    }
+
     const oldMaximum = this[maximum].to;
     const oldMinimum = this[minimum].to;
     const fromZero = this.chartType === 'bars' || this.chartType === 'areas';
@@ -1101,9 +1108,9 @@ class TelegramChart {
           maximums[i] = 0;
 
           for (let j = 0; j < this.lines.length; j++) {
-            if (!this.lines[j].visible) continue;
+            if (!this.lines[j].opacity.value) continue;
 
-            maximums[i] += this.lines[j].data[i];
+            maximums[i] += this.lines[j].data[i] * this.lines[j].opacity.value;
           }
         }
       }
@@ -1295,7 +1302,11 @@ class TelegramChart {
             return;
           }
 
-          const cy = (this.maximum.to - line.data[this.selectedX]) / (this.maximum.to - this.minimum.to) * this.dimensions.chartHeight;
+          let cy = (this.maximum.to - line.data[this.selectedX]) / (this.maximum.to - this.minimum.to) * this.dimensions.chartHeight;
+
+          if (this.yScaled) {
+            cy = (line.maximum.to - line.data[this.selectedX]) / (line.maximum.to - line.minimum.to) * this.dimensions.chartHeight;
+          }
 
           circle.setAttribute('cy', cy + 'px');
         }

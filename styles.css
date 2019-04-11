@@ -324,7 +324,7 @@ body.night {
 }
 
 body.night .chart__y-axis line {
-    stroke: rgba(122, 132, 168, 0.2);
+    stroke: rgba(255, 255, 255, 0.1);
 }
 
 body.night .chart__y-line {
@@ -335,8 +335,12 @@ body.night .chart__info-line {
     stroke: rgba(151, 189, 230, 0.4);
 }
 
-body.night .chart__x-axis text, body.night .chart__y-axis text {
-    fill: rgba(116, 138, 165, 0.6);
+body.night .chart__x-axis text {
+    fill: rgba(163, 177, 194, 0.6);
+}
+
+body.night .chart__y-axis text {
+    fill: rgba(236, 242, 248, 0.5);
 }
 
 body.night .chart__info-circle {
