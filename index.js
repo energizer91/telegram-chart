@@ -2,23 +2,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const chartsData = [
     {
       title: 'Users',
-      url: 'data/1/overview.json'
+      url: 'data/1'
     },
     {
       title: 'Interactions',
-      url: 'data/2/overview.json'
+      url: 'data/2'
     },
     {
       title: 'Fruits',
-      url: 'data/3/overview.json'
+      url: 'data/3'
     },
     {
       title: 'Views spread',
-      url: 'data/4/overview.json'
+      url: 'data/4'
     },
     {
       title: 'Also fruits',
-      url: 'data/5/overview.json'
+      url: 'data/5'
     }
   ];
 

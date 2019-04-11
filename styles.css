@@ -41,6 +41,10 @@ body {
 
 .chart__absolute-viewport {
     position: relative;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .chart__viewport {
@@ -63,6 +67,10 @@ body {
 
 .chart__offset-absolute-viewport {
     position: relative;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .chart__offset-absolute-viewport canvas {

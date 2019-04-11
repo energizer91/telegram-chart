@@ -45,6 +45,14 @@ const createElement = (tag, attrs = {}) => {
 
 const ease = CubicBezier(0.25, 0.1, 0.25, 1.0);
 
+const getTrailingZeroes = value => {
+  if (value / 10 < 1) {
+    return '0' + value;
+  }
+
+  return value;
+};
+
 const svgNS = 'http://www.w3.org/2000/svg';
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const weeks = ['Sun', 'Mon', 'Tue', 'Wen', 'Thu', 'Fri', 'Sat'];
@@ -81,11 +89,13 @@ class TelegramChart {
     this.infoViewport = null; // viewport for info window
     this.xTicksCount = 0; // count of y ticks
     this.yTicksCount = 0; // count of y ticks
+    this.yTicksInterval = 0; // count of y ticks
     this.selectedX = -1; // selected x coord for info window
     this.offsetLeft = 0; // zoom lower limit
     this.offsetRight = 0.3; // zoom upper limit
     this.zoomRatio = 1; // zoom ratio for main chart
     this.fragmentWidth = 0;
+    this.zoomedIn = false;
 
     this.maximum = this.createAnimation(0);
     this.minimum = this.createAnimation(0);
@@ -132,7 +142,8 @@ class TelegramChart {
       window.addEventListener('resize', resizeEvent);
     }
 
-    this.getData(this.url);
+    this.getData(this.url + '/overview.json')
+      .then(data => this.initializeChartData(data));
 
     console.log(this);
   }
@@ -154,53 +165,54 @@ class TelegramChart {
     };
   }
 
+  initializeChartData(data) {
+    this.yScaled = data.y_scaled;
+    this.percentage = data.percentage;
+    this.stacked = data.stacked;
+
+    this.xAxis = data.columns.find(column => data.types[column[0]] === 'x').slice(1);
+    const lines = data.columns.filter(column => data.types[column[0]] === 'line');
+    const bars = data.columns.filter(column => data.types[column[0]] === 'bar');
+    const areas = data.columns.filter(column => data.types[column[0]] === 'area');
+
+    if (lines.length) {
+      this.lines = lines.map(line => this.convertLineData(data, line));
+      this.chartType = 'lines';
+    } else if (bars.length) {
+      this.lines = bars.map(line => this.convertLineData(data, line));
+      this.chartType = 'bars';
+    } else if (areas.length) {
+      this.lines = areas.map(line => this.convertLineData(data, line));
+      this.chartType = 'areas';
+    }
+
+    this.findOffsetMaximumAndMinimum();
+
+    this.createOffsetWrapper();
+    this.setDimensions();
+
+    this.createXAxis();
+    this.createYAxis();
+
+    this.createInfo();
+
+    this.needOffsetRedraw = true;
+    if (this.lines.length > 1) {
+      this.createToggleCheckboxes();
+    }
+
+    this.render();
+
+    requestAnimationFrame(() => this.renderCanvas());
+  }
+
   getData(url) {
     if (!url) {
       throw new Error('Url is invalid');
     }
 
-    fetch(url)
-      .then(response => response.json())
-      .then(data => {
-        this.yScaled = data.y_scaled;
-        this.percentage = data.percentage;
-        this.stacked = data.stacked;
-
-        this.xAxis = data.columns.find(column => data.types[column[0]] === 'x').slice(1);
-        const lines = data.columns.filter(column => data.types[column[0]] === 'line');
-        const bars = data.columns.filter(column => data.types[column[0]] === 'bar');
-        const areas = data.columns.filter(column => data.types[column[0]] === 'area');
-
-        if (lines.length) {
-          this.lines = lines.map(line => this.convertLineData(data, line));
-          this.chartType = 'lines';
-        } else if (bars.length) {
-          this.lines = bars.map(line => this.convertLineData(data, line));
-          this.chartType = 'bars';
-        } else if (areas.length) {
-          this.lines = areas.map(line => this.convertLineData(data, line));
-          this.chartType = 'areas';
-        }
-
-        this.findOffsetMaximumAndMinimum();
-
-        this.createOffsetWrapper();
-        this.setDimensions();
-
-        this.createXAxis();
-        this.createYAxis();
-
-        this.createInfo();
-
-        this.needOffsetRedraw = true;
-        if (this.lines.length > 1) {
-          this.createToggleCheckboxes();
-        }
-
-        this.render();
-
-        requestAnimationFrame(() => this.renderCanvas());
-      })
+    return fetch(url)
+      .then(response => response.json());
   }
 
   createAnimation(value, duration = DURATION, easing = ease) {
@@ -343,6 +355,10 @@ class TelegramChart {
   }
 
   createOffsetWrapper() {
+    if (this.offsetContainer) {
+      return;
+    }
+
     this.offsetContainer = createElement('div');
     this.offsetContainer.classList.add('chart__offset-container');
     this.offsetContainer.style.padding = `0 ${this.chartPadding}px`;
@@ -494,9 +510,13 @@ class TelegramChart {
   }
 
   createToggleCheckboxes() {
-    const checkboxContainer = createElement('div');
-    checkboxContainer.classList.add('chart__checks');
-    this.offsetContainer.appendChild(checkboxContainer);
+    if (this.checkboxContainer) {
+      this.checkboxContainer.remove();
+    }
+
+    this.checkboxContainer = createElement('div');
+    this.checkboxContainer.classList.add('chart__checks');
+    this.offsetContainer.appendChild(this.checkboxContainer);
 
     this.lines.forEach(line => {
       const label = createElement('label');
@@ -521,11 +541,15 @@ class TelegramChart {
       label.appendChild(checkbox);
       label.appendChild(icon);
       label.appendChild(text);
-      checkboxContainer.appendChild(label);
+      this.checkboxContainer.appendChild(label);
     });
   }
 
   createXAxis() {
+    if (this.xAxisViewport) {
+      return;
+    }
+
     this.xAxisViewport = createElementNS('g', {
       transform: `translate(0, ${this.dimensions.chartHeight + 15})`
     });
@@ -534,6 +558,10 @@ class TelegramChart {
   }
 
   createYAxis() {
+    if (this.yAxisViewport) {
+      return;
+    }
+
     this.yAxisViewport = createElementNS('g');
     this.yAxisViewport.classList.add('chart__y-axis');
     this.viewport.appendChild(this.yAxisViewport);
@@ -598,6 +626,31 @@ class TelegramChart {
     this.infoData.xInfoG.appendChild(this.infoData.values.wrapper);
 
     this.viewport.appendChild(this.infoViewport);
+
+    this.infoViewport.addEventListener('click', e => {
+      e.stopPropagation();
+
+      if (!this.selectedX) {
+        return;
+      }
+
+      if (this.zoomedIn) {
+        return;
+      }
+
+      const dataset = new Date(this.xAxis[this.selectedX]);
+      const dataString = `${dataset.getFullYear()}-${getTrailingZeroes(dataset.getMonth() + 1)}`;
+
+      console.log('click', dataString);
+
+      this.getData(`${this.url}/${dataString}/${getTrailingZeroes(dataset.getDate())}.json`)
+        .then(data => {
+          console.log(data);
+          this.zoomedIn = true;
+
+          this.initializeChartData(data);
+        })
+    })
   }
 
   renderOffsets() {
@@ -681,18 +734,18 @@ class TelegramChart {
     if (this.stacked) {
       newMaximum = maximumRow;
     } else {
-      newMaximum = maximums.reduce((acc, max) => max > acc ? max : acc);
+      newMaximum = maximums.reduce((acc, max) => max > acc ? max : acc, -Infinity);
     }
 
     if (!fromZero) {
-      newMinimum = minimums.reduce((acc, min) => min < acc ? min : acc);
+      newMinimum = minimums.reduce((acc, min) => min < acc ? min : acc, Infinity);
     } else {
       newMinimum = 0;
     }
 
-    if (newMaximum === -Infinity || !newMaximum) {
-      return;
-    }
+    // if (newMaximum === -Infinity || !newMaximum) {
+    //   return;
+    // }
 
     for (let l = 0; l < this.lines.length; l++) {
       if (!this.lines[l].visible) continue;
@@ -887,11 +940,12 @@ class TelegramChart {
     const yTickInterval = tickIncrement(minimum, maximum, requiredTicks);
     const yTicksCount = Math.ceil((maximum - minimum) / yTickInterval);
 
-    if (this.yTicksCount && yTickInterval * yTicksCount === this.yTicksCount) {
+    if (this.yTicksCount && this.yTicksInterval && yTicksCount === this.yTicksCount && yTickInterval === this.yTicksInterval) {
       return;
     }
 
-    this.yTicksCount = yTickInterval * yTicksCount;
+    this.yTicksCount =  yTicksCount;
+    this.yTicksInterval = yTickInterval;
 
     const shouldAnimate = this.yTicks.size !== 0;
 
