@@ -36,10 +36,21 @@ body {
 
 .chart svg {
     overflow-x: hidden;
+    position: relative;
+}
+
+.chart__absolute-viewport {
+    position: relative;
 }
 
 .chart__viewport {
     width: 100%;
+}
+
+.chart__canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
 }
 
 .chart__lines-viewport {
@@ -48,6 +59,20 @@ body {
 
 .chart__offset-container {
     box-sizing: border-box;
+}
+
+.chart__offset-absolute-viewport {
+    position: relative;
+}
+
+.chart__offset-absolute-viewport canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.chart__offset-absolute-viewport svg {
+    position: relative;
 }
 
 .chart__offset-wrapper {
