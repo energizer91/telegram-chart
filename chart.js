@@ -261,11 +261,7 @@ class TelegramChart {
     this.context = this.canvas.getContext('2d');
 
     const getSelectedX = x => {
-      let selectedX = Math.round((this.offsetLeft + x / (this.chartPadding + this.dimensions.chartWidth) * (this.offsetRight - this.offsetLeft)) * (this.xAxis.length - 1));
-
-      if (this.chartType === 'bars') {
-        selectedX -= 1;
-      }
+      const selectedX = Math.round((this.offsetLeft + x / (this.dimensions.chartPadding + this.dimensions.width) * (this.offsetRight - this.offsetLeft)) * (this.xAxis.length - 1));
 
       if (selectedX === this.selectedX) {
         return;
@@ -634,7 +630,7 @@ class TelegramChart {
 
     const oldMaximum = this[maximum].to;
     const oldMinimum = this[minimum].to;
-    const fromZero = this.chartType === 'bars' || this.chartType === 'areas';
+    const fromZero = this.stacked;
 
     let newMaximum;
     let newMinimum;
@@ -771,7 +767,7 @@ class TelegramChart {
     };
 
     if (this.xAxis && this.xAxis.length) {
-      this.fragmentWidth = this.dimensions.chartWidth / this.xAxis.length;
+      this.fragmentWidth = this.dimensions.chartWidth / (this.xAxis.length - 1);
     }
 
     this.setViewportAttributes();
@@ -980,8 +976,8 @@ class TelegramChart {
     const offset = this.dimensions.chartPadding - this.offsetLeft * this.dimensions.chartWidth * this.zoomRatio;
     let maximum = this.maximum.value;
     let minimum = this.minimum.value;
-    let left = Math.floor(this.offsetLeft * this.xAxis.length) - 3;
-    let right = Math.ceil(this.offsetRight * this.xAxis.length) + 3;
+    let left = Math.floor(this.offsetLeft * this.xAxis.length - this.dimensions.chartPadding * this.fragmentWidth * this.zoomRatio);
+    let right = Math.ceil(this.offsetRight * this.xAxis.length + this.dimensions.chartPadding * this.fragmentWidth * this.zoomRatio);
     let w = this.fragmentWidth * this.zoomRatio;
 
     if (left < 0) left = 0;
@@ -1068,7 +1064,7 @@ class TelegramChart {
       context.fillStyle = line.color;
       context.globalAlpha = 1;
 
-      for (let i = left; i < right; i++) {
+      for (let i = left; i < right - 1; i++) {
         const x = w * i + offset;
 
         if (this.selectedX >= 0) {
