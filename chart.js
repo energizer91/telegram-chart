@@ -137,7 +137,7 @@ class TelegramChart {
     console.log(this);
   }
 
-  convertLineData(data, line) {
+  convertLineData(data = {names: [], colors: []}, line) {
     const id = line[0];
 
     return {
@@ -877,15 +877,6 @@ class TelegramChart {
     };
   }
 
-  // createXTick(index) {
-  //   return {
-  //     first: index === 0,
-  //     last: index === this.xAxis.length - 1,
-  //     value: this.getDateLabel(this.xAxis[index]),
-  //     opacity: this.createAnimation(1)
-  //   }
-  // }
-
   renderYTicks() {
     const requiredTicks = 6;
     const maximum = this.maximum.to;
@@ -959,15 +950,6 @@ class TelegramChart {
       opacity: this.createAnimation(1)
     };
   }
-
-  // createYTick(value) {
-  //   return {
-  //     minimum: value === this.minimum.to,
-  //     value: this.getYLabel(value),
-  //     // value,
-  //     opacity: this.createAnimation(1)
-  //   }
-  // }
 
   getDateLabel(time) {
     const date = new Date(time);
@@ -1278,6 +1260,8 @@ class TelegramChart {
       xLine.style.display = 'block';
     }
 
+    let lineHeight = 0;
+
     this.lines
       .forEach((line, index) => {
         if (!values.has(line.id)) {
@@ -1317,12 +1301,15 @@ class TelegramChart {
         }
 
         if (!line.visible) {
-          elem.remove();
-          values.delete(line.id);
+          elem.style.display = 'none';
           invisibleItems--;
 
           return;
+        } else {
+          elem.style.display = 'block';
         }
+
+        lineHeight += line.data[this.selectedX];
 
         const currentIndex = index + invisibleItems;
         const value = elem.querySelector('.chart__info-value');
