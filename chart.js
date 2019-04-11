@@ -630,7 +630,7 @@ class TelegramChart {
 
     const oldMaximum = this[maximum].to;
     const oldMinimum = this[minimum].to;
-    const fromZero = this.stacked;
+    const fromZero = this.chartType === 'bars' || this.chartType === 'areas';
 
     let newMaximum;
     let newMinimum;
