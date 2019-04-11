@@ -643,6 +643,16 @@ class TelegramChart {
 
       console.log('click', dataString);
 
+      this.selectedX = -1;
+
+      if (this.chartType === 'areas') {
+        this.chartType = 'circle';
+
+        this.render();
+
+        return;
+      }
+
       this.getData(`${this.url}/${dataString}/${getTrailingZeroes(dataset.getDate())}.json`)
         .then(data => {
           console.log(data);
@@ -1121,7 +1131,7 @@ class TelegramChart {
       for (let i = left; i < right - 1; i++) {
         const x = w * i + offset;
 
-        if (this.selectedX >= 0) {
+        if (this.selectedX >= 0 && context === this.context) {
           context.globalAlpha = 0.5;
         }
 
@@ -1148,7 +1158,7 @@ class TelegramChart {
       }
 
       context.fill();
-    } else if (this.chartType === 'areas') {
+    } else if (this.chartType === 'areas' || (this.chartType === 'circle' && context === this.offsetContext)) {
       context.fillStyle = line.color;
 
       const maximums = new Array(right - left);
