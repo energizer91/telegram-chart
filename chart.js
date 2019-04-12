@@ -64,10 +64,15 @@ class TelegramChart {
     this.container.style.width = '100%';
     selector.appendChild(this.container);
 
-    this.title = createElement('p');
+    this.title = createElement('span');
     this.title.classList.add('chart__title');
     this.title.innerText = params.title;
     this.container.appendChild(this.title);
+
+    this.zoomOutLabel = createElement('span');
+    this.zoomOutLabel.classList.add('chart__zoom-out-label');
+    this.zoomOutLabel.innerText = 'Zoom Out';
+    this.container.appendChild(this.zoomOutLabel);
 
     this.url = url;
     this.params = params;
@@ -145,8 +150,14 @@ class TelegramChart {
       window.addEventListener('resize', resizeEvent);
     }
 
+    this.zoomOutLabel.addEventListener('click', () => {
+      this.zoomOut();
+    });
+
     this.getData(this.url + '/overview.json')
       .then(data => {
+        this.overview = data;
+
         this.offsetLeft = 0;
         this.offsetRight = 0.3;
 
@@ -175,29 +186,6 @@ class TelegramChart {
       offsetMinimum: this.createAnimation(0),
       visible: true
     };
-  }
-
-  getDayOffsets(day) {
-    const start = day;
-    const end = start + 60 * 60 * 24 * 1000;
-    let newLeft = -1;
-    let newRight = -1;
-
-    for (let i = 0; i < this.xAxis.length; i++) {
-      if (this.xAxis[i] < start) {
-        continue;
-      }
-
-      if (this.xAxis[i] >= start && newLeft === -1) {
-        newLeft = i;
-      }
-
-      if (this.xAxis[i] < end) {
-        newRight = i;
-      }
-    }
-
-    return [newLeft / (this.xAxis.length - 1), newRight / (this.xAxis.length - 1)];
   }
 
   initializeChartData(data) {
@@ -235,6 +223,24 @@ class TelegramChart {
     if (this.lines.length > 1) {
       this.createToggleCheckboxes();
     }
+  }
+
+  zoomOut() {
+    if (!this.overview) {
+      throw new Error('no overview information provided');
+    }
+
+    this.container.classList.remove('chart_zoomed-in');
+
+    this.zoomedIn = false;
+    this.offsetLeft = 0;
+    this.offsetRight = 0.3;
+
+    this.initializeChartData(this.overview);
+
+    this.render();
+
+    requestAnimationFrame(() => this.renderCanvas());
   }
 
   getData(url) {
@@ -721,15 +727,13 @@ class TelegramChart {
         .then(data => {
           console.log(data);
           this.zoomedIn = true;
-          const selectedDate = this.xAxis[this.selectedX];
-
+          this.container.classList.add('chart_zoomed-in');
           this.initializeChartData(data);
 
-          const [newLeft, newRight] = this.getDayOffsets(selectedDate);
+          this.offsetStepLimit = 24 / this.xAxis.length;
 
-          this.offsetLeft = newLeft;
-          this.offsetRight = newRight;
-          this.offsetStepLimit = newRight - newLeft;
+          this.offsetLeft = this.offsetStepLimit * 3;
+          this.offsetRight = this.offsetStepLimit * 4;
 
           this.selectedX = -1;
 

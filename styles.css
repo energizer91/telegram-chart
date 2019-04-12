@@ -39,6 +39,18 @@ body {
     position: relative;
 }
 
+.chart__zoom-out-label {
+    display: none;
+}
+
+.chart_zoomed-in .chart__title {
+    display: none;
+}
+
+.chart_zoomed-in .chart__zoom-out-label {
+    display: block;
+}
+
 .chart__absolute-viewport {
     position: relative;
     -webkit-user-select: none;
