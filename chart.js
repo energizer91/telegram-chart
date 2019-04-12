@@ -54,8 +54,8 @@ const getTrailingZeroes = value => {
 };
 
 const svgNS = 'http://www.w3.org/2000/svg';
-const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const weeks = ['Sun', 'Mon', 'Tue', 'Wen', 'Thu', 'Fri', 'Sat'];
+const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const weeks = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 class TelegramChart {
   constructor(selector, url = '', params = {name: 'Default chart'}) {
@@ -91,8 +91,11 @@ class TelegramChart {
     this.yTicksCount = 0; // count of y ticks
     this.yTicksInterval = 0; // count of y ticks
     this.selectedX = -1; // selected x coord for info window
+    this.selectedAnimation = this.createAnimation(0);
+    this.selectDirection = 0; // 1 - next day, -1 - previous day, 0 - no change
     this.offsetLeft = 0; // zoom lower limit
-    this.offsetRight = 0.3; // zoom upper limit
+    this.offsetRight = 1; // zoom upper limit
+    this.offsetStepLimit = 0.3; // what will be minimum offset step so it can change
     this.zoomRatio = 1; // zoom ratio for main chart
     this.fragmentWidth = 0;
     this.zoomedIn = false;
@@ -143,7 +146,16 @@ class TelegramChart {
     }
 
     this.getData(this.url + '/overview.json')
-      .then(data => this.initializeChartData(data));
+      .then(data => {
+        this.offsetLeft = 0;
+        this.offsetRight = 0.3;
+
+        this.initializeChartData(data);
+
+        this.render();
+
+        requestAnimationFrame(() => this.renderCanvas());
+      });
 
     console.log(this);
   }
@@ -163,6 +175,29 @@ class TelegramChart {
       offsetMinimum: this.createAnimation(0),
       visible: true
     };
+  }
+
+  getDayOffsets(day) {
+    const start = day;
+    const end = start + 60 * 60 * 24 * 1000;
+    let newLeft = -1;
+    let newRight = -1;
+
+    for (let i = 0; i < this.xAxis.length; i++) {
+      if (this.xAxis[i] < start) {
+        continue;
+      }
+
+      if (this.xAxis[i] >= start && newLeft === -1) {
+        newLeft = i;
+      }
+
+      if (this.xAxis[i] < end) {
+        newRight = i;
+      }
+    }
+
+    return [newLeft / (this.xAxis.length - 1), newRight / (this.xAxis.length - 1)];
   }
 
   initializeChartData(data) {
@@ -200,10 +235,6 @@ class TelegramChart {
     if (this.lines.length > 1) {
       this.createToggleCheckboxes();
     }
-
-    this.render();
-
-    requestAnimationFrame(() => this.renderCanvas());
   }
 
   getData(url) {
@@ -235,6 +266,10 @@ class TelegramChart {
     animation.to = to;
     animation.from = animation.value;
     animation.start = Date.now();
+  }
+
+  hasAnimation(animation) {
+    return animation.to !== animation.value;
   }
 
   updateAnimation(animation) {
@@ -273,13 +308,22 @@ class TelegramChart {
     this.context = this.canvas.getContext('2d');
 
     const getSelectedX = x => {
-      const selectedX = Math.round((this.offsetLeft + x / (this.dimensions.chartPadding + this.dimensions.width) * (this.offsetRight - this.offsetLeft)) * (this.xAxis.length - 1));
+      const selectedX = Math.floor((this.offsetLeft + x / (this.dimensions.chartPadding + this.dimensions.chartWidth) * (this.offsetRight - this.offsetLeft)) * (this.xAxis.length - 1));
 
       if (selectedX === this.selectedX) {
         return;
       }
 
+      if (this.selectedX < selectedX) {
+        this.selectDirection = 1;
+      } else if (this.selectedX > selectedX) {
+        this.selectDirection = -1;
+      } else {
+        this.selectDirection = 0;
+      }
+
       this.selectedX = selectedX;
+      this.animate(this.selectedAnimation, 1);
 
       this.renderInfo();
 
@@ -305,6 +349,7 @@ class TelegramChart {
         this.needRedraw = true;
       }
       this.selectedX = -1;
+      this.animate(this.selectedAnimation, 0);
 
       if (this.infoViewport) {
         this.infoViewport.style.opacity = '0';
@@ -461,11 +506,19 @@ class TelegramChart {
         if (leftDragging) {
           let newLeft = x - leftCoordinate;
 
+          if (this.zoomedIn && Math.abs(newLeft / this.dimensions.offsetWidth - this.offsetLeft) < this.offsetStepLimit) {
+            return;
+          }
+
           this.offsetLeft = newLeft / this.dimensions.offsetWidth;
         }
 
         if (rightDragging) {
           let newRight = x - rightCoordinate;
+
+          if (this.zoomedIn && Math.abs(newRight / this.dimensions.offsetWidth - this.offsetRight) < this.offsetStepLimit) {
+            return;
+          }
 
           this.offsetRight = newRight / this.dimensions.offsetWidth;
         }
@@ -627,6 +680,11 @@ class TelegramChart {
 
     this.viewport.appendChild(this.infoViewport);
 
+    this.infoViewport.addEventListener('mousedown', e => e.stopPropagation());
+    this.infoViewport.addEventListener('mouseup', e => e.stopPropagation());
+    this.infoViewport.addEventListener('touchstart', e => e.stopPropagation());
+    this.infoViewport.addEventListener('touchend', e => e.stopPropagation());
+
     this.infoViewport.addEventListener('click', e => {
       e.stopPropagation();
 
@@ -643,10 +701,16 @@ class TelegramChart {
 
       console.log('click', dataString);
 
-      this.selectedX = -1;
-
       if (this.chartType === 'areas') {
         this.chartType = 'circle';
+        // const selectedDate = this.xAxis[this.selectedX];
+        //
+        // const [newLeft, newRight] = this.getDayOffsets(selectedDate);
+        //
+        // this.offsetLeft = newLeft;
+        // this.offsetRight = newRight;
+        //
+        // this.selectedX = -1;
 
         this.render();
 
@@ -657,8 +721,21 @@ class TelegramChart {
         .then(data => {
           console.log(data);
           this.zoomedIn = true;
+          const selectedDate = this.xAxis[this.selectedX];
 
           this.initializeChartData(data);
+
+          const [newLeft, newRight] = this.getDayOffsets(selectedDate);
+
+          this.offsetLeft = newLeft;
+          this.offsetRight = newRight;
+          this.offsetStepLimit = newRight - newLeft;
+
+          this.selectedX = -1;
+
+          this.render();
+
+          requestAnimationFrame(() => this.renderCanvas());
         })
     })
   }
@@ -912,7 +989,7 @@ class TelegramChart {
 
           this.xTicks.set(newIndex, tick);
           this.xAxisViewport.appendChild(tick.element);
-        } else if (needAnimation) {
+        } else if (needAnimation && this.hasAnimation(tick.opacity)) {
           // this.animations.fadeIn(tick);
           this.animate(tick.opacity, 1);
         }
@@ -1229,6 +1306,11 @@ class TelegramChart {
 
       context.closePath();
       context.fill();
+    } else if (this.chartType === 'circle') {
+      const centerX = this.dimensions.width / 2;
+      const centerY = this.dimensions.chartHeight / 2;
+
+      console.log(centerX, centerY);
     }
   }
 
@@ -1247,9 +1329,7 @@ class TelegramChart {
       const position = this.dimensions.chartPadding + (index / (this.xAxis.length - 1) - this.offsetLeft) * this.dimensions.chartWidth * this.zoomRatio;
       if (this.updateAnimation(tick.opacity)) this.needRedraw = true;
 
-      // this.renderCanvasXTick(index, tick, position);
-      tick.element.setAttribute('transform', `translate(${position}, 0)`);
-      tick.element.style.transform = `translate(${position}px, 0)`;
+      tick.element.setAttribute('x', position);
       tick.element.style.opacity = tick.opacity.value;
     }
   }
@@ -1449,6 +1529,8 @@ class TelegramChart {
   renderCanvas() {
     if (this.updateAnimation(this.maximum)) this.needRedraw = true;
     if (this.updateAnimation(this.minimum)) this.needRedraw = true;
+
+    if (this.updateAnimation(this.selectedAnimation)) this.needRedraw = true;
 
     if (this.updateAnimation(this.offsetMaximum)) this.needOffsetRedraw = true;
     if (this.updateAnimation(this.offsetMinimum)) this.needOffsetRedraw = true;
