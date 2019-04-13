@@ -512,21 +512,25 @@ class TelegramChart {
         if (leftDragging) {
           let newLeft = x - leftCoordinate;
 
-          if (this.zoomedIn && Math.abs(newLeft / this.dimensions.offsetWidth - this.offsetLeft) < this.offsetStepLimit) {
-            return;
-          }
+          if (this.zoomedIn) {
+            const step = Math.round(newLeft / this.dimensions.offsetWidth / this.offsetStepLimit);
 
-          this.offsetLeft = newLeft / this.dimensions.offsetWidth;
+            this.offsetLeft = step * this.offsetStepLimit;
+          } else {
+            this.offsetLeft = newLeft / this.dimensions.offsetWidth;
+          }
         }
 
         if (rightDragging) {
           let newRight = x - rightCoordinate;
 
-          if (this.zoomedIn && Math.abs(newRight / this.dimensions.offsetWidth - this.offsetRight) < this.offsetStepLimit) {
-            return;
-          }
+          if (this.zoomedIn) {
+            const step = Math.round(newRight / this.dimensions.offsetWidth / this.offsetStepLimit);
 
-          this.offsetRight = newRight / this.dimensions.offsetWidth;
+            this.offsetRight = step * this.offsetStepLimit;
+          } else {
+            this.offsetRight = newRight / this.dimensions.offsetWidth;
+          }
         }
 
         if (this.offsetRight - this.offsetLeft < offsetBorder) {
@@ -1102,6 +1106,10 @@ class TelegramChart {
   getDateLabel(time) {
     const date = new Date(time);
 
+    if (this.zoomedIn) {
+      return `${getTrailingZeroes(date.getHours())}:${getTrailingZeroes(date.getMinutes())}`
+    }
+
     return months[date.getMonth()] + ' ' + date.getDate();
   }
 
@@ -1121,8 +1129,8 @@ class TelegramChart {
     const offset = this.dimensions.chartPadding - this.offsetLeft * this.dimensions.chartWidth * this.zoomRatio;
     let maximum = this.maximum.value;
     let minimum = this.minimum.value;
-    let left = Math.floor(this.offsetLeft * this.xAxis.length - this.dimensions.chartPadding * this.fragmentWidth * this.zoomRatio);
-    let right = Math.ceil(this.offsetRight * this.xAxis.length + this.dimensions.chartPadding * this.fragmentWidth * this.zoomRatio);
+    let left = Math.floor(this.offsetLeft * this.xAxis.length - this.dimensions.chartPadding / this.fragmentWidth);
+    let right = Math.ceil(this.offsetRight * this.xAxis.length + this.dimensions.chartPadding / this.fragmentWidth);
     let w = this.fragmentWidth * this.zoomRatio;
 
     if (left < 0) left = 0;
