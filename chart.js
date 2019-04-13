@@ -93,6 +93,7 @@ class TelegramChart {
 
     this.infoViewport = null; // viewport for info window
     this.xTicksCount = 0; // count of y ticks
+    this.xTicksInterval = 0; // count of y ticks
     this.yTicksCount = 0; // count of y ticks
     this.yTicksInterval = 0; // count of y ticks
     this.selectedX = -1; // selected x coord for info window
@@ -959,10 +960,10 @@ class TelegramChart {
     let needAnimation = false;
 
     const comfortableCount = Math.floor(this.xAxis.length / 6);
-    const tickInterval = Math.ceil(Math.log2(comfortableCount / this.zoomRatio));
+    const tickInterval = Math.ceil(Math.log2(Math.round(comfortableCount / this.zoomRatio)));
     const ticksCount = Math.ceil(this.xAxis.length / 2 ** tickInterval * this.zoomRatio);
 
-    if (this.xTicksCount && this.xTicksCount !== ticksCount) {
+    if (this.xTicksInterval && this.xTicksInterval !== tickInterval) {
       needAnimation = true;
       for (let [index, tick] of this.xTicks) {
         if (index % (2 ** tickInterval) !== 0) {
@@ -972,7 +973,7 @@ class TelegramChart {
       }
     }
 
-    this.xTicksCount = ticksCount;
+    this.xTicksInterval = tickInterval;
 
     for (let i = 0; i < ticksCount; i++) {
       const newIndex = i * 2 ** tickInterval;
@@ -1110,7 +1111,7 @@ class TelegramChart {
       return `${getTrailingZeroes(date.getHours())}:${getTrailingZeroes(date.getMinutes())}`
     }
 
-    return months[date.getMonth()] + ' ' + date.getDate();
+    return months[date.getMonth()].slice(0, 3) + ' ' + date.getDate();
   }
 
   getYLabel(value) {
