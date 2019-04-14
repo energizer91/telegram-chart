@@ -1161,6 +1161,44 @@ class TelegramChart {
     }
   }
 
+  renderCanvasCircle() {
+    let left = Math.floor(this.offsetLeft * this.xAxis.length);
+    let right = Math.ceil(this.offsetRight * this.xAxis.length);
+    const centerX = this.dimensions.width / 2;
+    const centerY = this.dimensions.chartHeight / 2;
+    const radius = this.dimensions.chartHeight / 2;
+
+    let total = 0;
+    const values = new Array(this.lines.length);
+
+    for (let i = 0; i < this.lines.length; i++) {
+      if (!this.lines[i].opacity.value) continue;
+      for (let j = left; j < right; j++) {
+          if (!values[i]) {
+            values[i] = 0;
+          }
+          values[i] += this.lines[i].data[j] * this.lines[i].opacity.value;
+      }
+      total += values[i];
+    }
+
+    let start = 0;
+
+    for (let i = 0; i < this.lines.length; i++) {
+      this.context.beginPath();
+      this.context.fillStyle = this.lines[i].color;
+      const phi = start + values[i] / total * 2 * Math.PI;
+
+      this.context.moveTo(centerX, centerY);
+      this.context.arc(centerX, centerY, radius, start, phi);
+      this.context.lineTo(centerX, centerY);
+      this.context.fill();
+      this.context.closePath();
+
+      start = phi;
+    }
+  }
+
   renderCanvasLines() {
     this.context.clearRect(0, 0, this.dimensions.chartPadding * 2 + this.dimensions.chartWidth, this.dimensions.chartHeight);
     this.context.lineWidth = this.mainLineWidth;
@@ -1173,6 +1211,12 @@ class TelegramChart {
 
     if (left < 0) left = 0;
     if (right > this.xAxis.length) right = this.xAxis.length;
+
+    if (this.chartType === 'circle') {
+      this.renderCanvasCircle();
+
+      return;
+    }
 
     this.lines.forEach((line, index) => {
       if (this.yScaled) {
@@ -1251,7 +1295,7 @@ class TelegramChart {
       }
 
       context.stroke();
-    } else if (this.chartType === 'bars' || (this.chartType === 'circle' && context === this.offsetContext)) {
+    } else if (this.chartType === 'bars' || this.chartType === 'circle') {
       context.fillStyle = line.color;
       context.globalAlpha = 1;
 
@@ -1356,11 +1400,56 @@ class TelegramChart {
 
       context.closePath();
       context.fill();
-    } else if (this.chartType === 'circle') {
+    } else if (this.chartType === 'circle' && context === this.context) {
+      let left = Math.floor(this.offsetLeft * this.xAxis.length);
+      let right = Math.ceil(this.offsetRight * this.xAxis.length);
       const centerX = this.dimensions.width / 2;
       const centerY = this.dimensions.chartHeight / 2;
+      const radius = this.dimensions.chartHeight / 2;
 
       console.log(centerX, centerY);
+
+      context.fillStyle = line.color;
+
+      const maximums = new Array(right - left);
+
+      for (let i = left; i < right; i++) {
+        maximums[i] = 0;
+
+        for (let j = 0; j < this.lines.length; j++) {
+          if (!this.lines[j].opacity.value) continue;
+
+          maximums[i] += this.lines[j].data[i] * this.lines[j].opacity.value;
+        }
+      }
+
+      let start = 0;
+
+      for (let i = left; i < right; i++) {
+        let value = line.data[i];
+        let bottom = minimum;
+
+        if (this.stacked) {
+          for (let j = 0; j < index; j++) {
+            bottom += this.lines[j].data[i] * this.lines[j].opacity.value;
+          }
+
+          value += bottom;
+        }
+
+        const y = (maximums[i] - value) / maximums[i] * height;
+        const h = ((maximums[i] - bottom) / maximums[i] * height) - y;
+        const alpha = y * 2 * Math.PI;
+
+        context.arc(centerX, centerY, start, alpha, radius);
+
+        // context.lineTo(centerX + x2, centerY + y2);
+        context.lineTo(centerX, centerY);
+        start += alpha;
+      }
+
+      context.closePath();
+      context.fill();
     }
   }
 
