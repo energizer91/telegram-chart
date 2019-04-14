@@ -5,7 +5,7 @@ html, body {
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, Helvetica, sans-serif;
+    font-family: Roboto, -apple-system, BlinkMacSystemFont, Helvetica, sans-serif;
     transition: background-color 0.3s, color 0.3s;
     min-height: 100vh;
 }
@@ -210,7 +210,7 @@ body {
 }
 
 .chart__info-week {
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 500;
     color: #222222;
     transition: fill 0.3s;
@@ -219,10 +219,12 @@ body {
 .chart__info-value {
     font-weight: 600;
     font-size: 14px;
+    text-anchor: end;
 }
 
 .chart__info-label {
-    font-size: 10px;
+    font-size: 13px;
+    font-weight: 400;
 }
 
 @keyframes showing {

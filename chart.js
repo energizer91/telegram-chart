@@ -710,7 +710,7 @@ class TelegramChart {
     this.infoData.weekLabel = createElementNS('text', {
       fill: 'black',
       y: '19px',
-      x: '-17px'
+      x: '-13px'
     });
     this.infoData.weekLabel.classList.add('chart__info-week');
     this.infoData.xInfoG.appendChild(this.infoData.weekLabel);
@@ -1647,11 +1647,8 @@ class TelegramChart {
     const selectedElement = this.xAxis[this.selectedX];
 
     const week = new Date(selectedElement);
-    const label = `${weeks[week.getDay()]}, ${week.getDate()} ${months[week.getMonth()]}`;
+    const label = `${weeks[week.getDay()].slice(0, 3)}, ${week.getDate()} ${months[week.getMonth()].slice(0, 3)} ${week.getFullYear()}`;
     const offset = this.chartPadding + (this.selectedX / (this.xAxis.length - 1) - this.offsetLeft) * this.dimensions.chartWidth * this.zoomRatio;
-
-    let valuesLength = 0;
-    let maxValuesLength = 0;
 
     this.infoViewport.setAttribute('transform', `translate(${offset}, 0)`);
 
@@ -1668,13 +1665,13 @@ class TelegramChart {
     this.lines
       .forEach((line, index) => {
         if (!values.has(line.id)) {
-          const elem = createElementNS('text', {
-            fill: line.color
-          });
+          const elem = createElementNS('text');
           const label = createElementNS('tspan');
           label.classList.add('chart__info-label');
           label.textContent = line.name;
-          const value = createElementNS('tspan');
+          const value = createElementNS('tspan', {
+            fill: line.color
+          });
           value.classList.add('chart__info-value');
           elem.appendChild(value);
           elem.appendChild(label);
@@ -1726,27 +1723,13 @@ class TelegramChart {
           return line.data[this.selectedX];
         }
 
-        const column = (currentIndex) / 2 ^ 0;
-        const x = -17 + Math.max(valuesLength, 30 * (currentIndex % 2));
-
-        elem.setAttribute('x', x + 'px');
-        elem.setAttribute('y', (40 + 32 * column) + 'px');
-        label.setAttribute('x', x + 'px');
-        label.setAttribute('y', (52 + 32 * column) + 'px');
+        value.setAttribute('x', 123 + 'px');
+        value.setAttribute('y', (40 + 20 * currentIndex) + 'px');
+        label.setAttribute('y', (40 + 20 * currentIndex) + 'px');
+        label.setAttribute('x', -13 + 'px');
 
         if (value.textContent !== String(line.data[this.selectedX])) {
           value.textContent = line.data[this.selectedX];
-        }
-
-        if ((currentIndex + 1) % 2 === 0) {
-          valuesLength = 0;
-        } else {
-          const elemLength = elem.getBBox().width + 10;
-
-          if (elemLength > maxValuesLength) {
-            maxValuesLength = elemLength;
-          }
-          valuesLength += Math.max(elemLength, maxValuesLength);
         }
 
         return line.data[this.selectedX];
@@ -1759,8 +1742,10 @@ class TelegramChart {
     const weekBB = weekLabel.getBBox();
     const labelsBB = valuesG.getBBox();
 
-    const infoRectWidth = Math.round(Math.max(weekBB.width, labelsBB.width) + 20);
-    const infoRectHeight = Math.round(weekBB.height + labelsBB.height + 25);
+    // const infoRectWidth = Math.round(Math.max(weekBB.width, labelsBB.width) + 20);
+    // const infoRectHeight = Math.round(weekBB.height + labelsBB.height + 25);
+    const infoRectWidth = 160;
+    const infoRectHeight = Math.round(weekBB.height + labelsBB.height + 16 );
 
     if (offset + infoRectWidth > this.dimensions.chartWidth + this.chartPadding * 3 + 5) {
       xInfoG.setAttribute('transform', `translate(${-offset + this.dimensions.chartWidth - infoRectWidth + this.chartPadding * 3 + 5}, 0)`);
