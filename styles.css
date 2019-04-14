@@ -196,6 +196,7 @@ body {
 
 .chart__y-axis text {
     text-anchor: start;
+    transition: opacity 0.3s;
 }
 
 .chart__info-viewport {

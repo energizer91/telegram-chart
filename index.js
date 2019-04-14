@@ -1,23 +1,35 @@
 document.addEventListener('DOMContentLoaded', () => {
   const chartsData = [
     {
-      title: 'Users',
-      url: 'data/1'
+      url: 'data/1',
+      params: {
+        title: 'Users'
+      }
     },
     {
-      title: 'Interactions',
+      params: {
+        title: 'Interactions'
+      },
       url: 'data/2'
     },
     {
-      title: 'Fruits',
+      params: {
+        title: 'Fruits'
+      },
       url: 'data/3'
     },
     {
-      title: 'Views spread',
+      params: {
+        title: 'Views spread',
+        zoomOverview: true
+      },
       url: 'data/4'
     },
     {
-      title: 'Also fruits',
+      params: {
+        title: 'Also fruits',
+        circleZoom: true
+      },
       url: 'data/5'
     }
   ];
@@ -44,5 +56,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
   container.appendChild(nightButton);
 
-  chartsData.forEach(data => new TelegramChart(charts, data.url, {height: 300, title: data.title}));
+  chartsData.forEach(data => new TelegramChart(charts, data.url, {height: 300, ...data.params}));
 });
