@@ -16,6 +16,7 @@ function tickIncrement(start, stop, count) {
 }
 
 const DURATION = 300;
+const ONE_DAY = 60 * 60 * 24 * 1000;
 
 // for creating svg elements
 const createElementNS = (tag, attrs = {}) => {
@@ -713,8 +714,42 @@ class TelegramChart {
       console.log('click', dataString);
 
       if (this.chartType === 'areas') {
+        this.zoomedIn = true;
+        this.container.classList.add('chart_zoomed-in');
+
+        this.xTicksInterval = 0;
+        this.xTicksCount = 0;
+        this.yTicksInterval = 0;
+        this.yTicksCount = 0;
+
+        let rightDays = this.selectedX + 3;
+        let leftDays = this.selectedX - 3;
+
+        if (rightDays > this.xAxis.length) {
+          const error = this.xAxis.length - rightDays;
+          rightDays -= error;
+          leftDays -= error
+        }
+
+        if (leftDays < 0) {
+          rightDays += leftDays;
+          leftDays = 0;
+        }
+
+        const newData = {...this.overview, columns: this.overview.columns.map(column => [column[0], ...column.slice(leftDays + 1, rightDays + 2)])};
+
+        this.initializeChartData(newData);
         this.chartType = 'circle';
-        // const selectedDate = this.xAxis[this.selectedX];
+
+        this.offsetStepLimit = 1 / 7;
+        // this.offsetLeft = this.offsetStepLimit * (this.selectedX - leftDays);
+        // this.offsetRight = this.offsetStepLimit * (rightDays - this.selectedX);
+        this.offsetLeft = this.offsetStepLimit * 3;
+        this.offsetRight = this.offsetStepLimit * 4;
+
+        this.selectedX = -1;
+
+        // console.log(leftDays, rightDays, this.overview.columns[0].slice(leftDays, rightDays + 1).map(date => new Date(date)));
         //
         // const [newLeft, newRight] = this.getDayOffsets(selectedDate);
         //
@@ -743,8 +778,6 @@ class TelegramChart {
           this.selectedX = -1;
 
           this.render();
-
-          requestAnimationFrame(() => this.renderCanvas());
         })
     })
   }
@@ -959,6 +992,8 @@ class TelegramChart {
   renderXTicks() {
     let needAnimation = false;
 
+    if (this.chartType === 'circle') return;
+
     const comfortableCount = Math.floor(this.xAxis.length / 6);
     const tickInterval = Math.ceil(Math.log2(Math.round(comfortableCount / this.zoomRatio)));
     const ticksCount = Math.ceil(this.xAxis.length / 2 ** tickInterval * this.zoomRatio);
@@ -1030,6 +1065,8 @@ class TelegramChart {
   }
 
   renderYTicks() {
+    if (this.chartType === 'circle') return;
+
     const requiredTicks = 6;
     const maximum = this.maximum.to;
     const minimum = this.minimum.to;
@@ -1040,7 +1077,7 @@ class TelegramChart {
       return;
     }
 
-    this.yTicksCount =  yTicksCount;
+    this.yTicksCount = yTicksCount;
     this.yTicksInterval = yTickInterval;
 
     const shouldAnimate = this.yTicks.size !== 0;
@@ -1214,7 +1251,7 @@ class TelegramChart {
       }
 
       context.stroke();
-    } else if (this.chartType === 'bars') {
+    } else if (this.chartType === 'bars' || (this.chartType === 'circle' && context === this.offsetContext)) {
       context.fillStyle = line.color;
       context.globalAlpha = 1;
 
@@ -1248,7 +1285,7 @@ class TelegramChart {
       }
 
       context.fill();
-    } else if (this.chartType === 'areas' || (this.chartType === 'circle' && context === this.offsetContext)) {
+    } else if (this.chartType === 'areas') {
       context.fillStyle = line.color;
 
       const maximums = new Array(right - left);
@@ -1333,6 +1370,9 @@ class TelegramChart {
     this.context.font = `${10 * this.pixelRatio}px Helvetica, sans-serif`;
 
     for (let [index, tick] of this.xTicks) {
+      if (this.chartType === 'circle' && tick.opacity.to !== 0) {
+        this.animate(tick.opacity, 0);
+      }
       if (tick.opacity.to === 0 && tick.opacity.value === 0) {
         tick.element.remove();
         this.xTicks.delete(index);
@@ -1356,6 +1396,9 @@ class TelegramChart {
     this.context.lineWidth = this.gridLineWidth;
 
     for (let [index, tick] of this.yTicks) {
+      if (this.chartType === 'circle' && tick.opacity.to !== 0) {
+        this.animate(tick.opacity, 0);
+      }
       if (tick.opacity.to === 0 && tick.opacity.value === 0) {
         tick.element.remove();
         this.yTicks.delete(index);
