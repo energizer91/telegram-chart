@@ -20,14 +20,14 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     {
       params: {
-        title: 'Views spread',
+        title: 'Views',
         zoomOverview: true
       },
       url: 'data/4'
     },
     {
       params: {
-        title: 'Also fruits',
+        title: 'Fruits',
         circleZoom: true
       },
       url: 'data/5'

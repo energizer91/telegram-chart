@@ -28,10 +28,20 @@ body {
     margin-bottom: 60px;
 }
 
+.chart__title-container {
+    display: flex;
+    justify-content: space-between;
+    margin: 0 10px 15px;
+}
+
 .chart__title {
     font-size: 16px;
     font-weight: 600;
-    margin: 0 0 10px 15px;
+}
+
+.chart__date-label {
+    font-size: 13px;
+    font-weight: 500;
 }
 
 .chart svg {

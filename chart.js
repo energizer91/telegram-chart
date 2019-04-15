@@ -78,15 +78,23 @@ class TelegramChart {
     this.container.style.width = '100%';
     selector.appendChild(this.container);
 
+    this.titleContainer = createElement('div');
+    this.titleContainer.classList.add('chart__title-container');
+    this.container.appendChild(this.titleContainer);
+
     this.title = createElement('span');
     this.title.classList.add('chart__title');
     this.title.innerText = params.title;
-    this.container.appendChild(this.title);
+    this.titleContainer.appendChild(this.title);
 
     this.zoomOutLabel = createElement('span');
     this.zoomOutLabel.classList.add('chart__zoom-out-label');
     this.zoomOutLabel.innerText = 'Zoom Out';
-    this.container.appendChild(this.zoomOutLabel);
+    this.titleContainer.appendChild(this.zoomOutLabel);
+
+    this.dateLabel = createElement('span');
+    this.dateLabel.classList.add('chart__date-label');
+    this.titleContainer.appendChild(this.dateLabel);
 
     this.url = url;
     this.params = params;
@@ -696,7 +704,9 @@ class TelegramChart {
     this.checkboxContainer.classList.add('chart__checks');
     this.offsetContainer.appendChild(this.checkboxContainer);
 
-    this.lines.forEach(line => {
+    const checkboxes = [];
+
+    this.lines.forEach((line, index) => {
       const label = createElement('label');
       const checkbox = createElement('input', {
         type: 'checkbox',
@@ -710,11 +720,65 @@ class TelegramChart {
       icon.style.backgroundColor = line.color;
       icon.classList.add('chart__toggle-check-icon');
 
+      checkboxes.push(label);
+
       if (!line.visible) {
         label.classList.add('chart__toggle-check_disabled');
       }
 
-      checkbox.addEventListener('change', e => this.toggleLine(e, label, line));
+      let timeout;
+      let longTap = false;
+
+      const toggleLine = (e, label, line) => {
+        if (this.lines.filter(line => line.visible).length === 1 && line.visible || longTap) {
+          e.preventDefault();
+
+          return;
+        }
+
+        if (line.visible) {
+          this.setLine(label, line, false);
+        } else {
+          this.setLine(label, line, true);
+        }
+      };
+
+      const longTapStart = e => {
+        longTap = false;
+        timeout = setTimeout(() => {
+          e.stopImmediatePropagation();
+          e.preventDefault();
+          longTap = true;
+
+          if (!line.visible) {
+            this.setLine(label, line, true);
+            checkboxes[index].checked = true;
+          }
+
+          this.lines.forEach((disabledLine, disabledIndex) => {
+            if (disabledIndex === index) {
+              return;
+            }
+
+            this.setLine(checkboxes[disabledIndex], disabledLine, false);
+            checkboxes[disabledIndex].checked = false;
+          })
+        }, 500);
+      };
+
+      const longTapEnd = () => {
+        clearTimeout(timeout);
+      };
+
+      if ('ontouchstart' in window) {
+        label.addEventListener('touchstart', e => longTapStart(e));
+        label.addEventListener('touchend', (e) => longTapEnd(e));
+      } else {
+        label.addEventListener('mousedown', e => longTapStart(e));
+        label.addEventListener('mouseup', (e) => longTapEnd(e));
+      }
+
+      label.addEventListener('change', e => toggleLine(e, label, line));
 
       label.appendChild(checkbox);
       label.appendChild(icon);
@@ -817,7 +881,7 @@ class TelegramChart {
       }
 
       const dataset = new Date(this.xAxis[this.selectedX]);
-      const dataString = `${dataset.getFullYear()}-${getTrailingZeroes(dataset.getMonth() + 1)}`;
+      const dataString = `${dataset.getUTCFullYear()}-${getTrailingZeroes(dataset.getUTCMonth() + 1)}`;
 
       console.log('click', dataString);
 
@@ -868,7 +932,7 @@ class TelegramChart {
         return;
       }
 
-      this.getData(`${this.url}/${dataString}/${getTrailingZeroes(dataset.getDate())}.json`)
+      this.getData(`${this.url}/${dataString}/${getTrailingZeroes(dataset.getUTCDate())}.json`)
         .then(data => {
           console.log(data);
           this.zoomedIn = true;
@@ -938,6 +1002,8 @@ class TelegramChart {
     leftSpacer.setAttribute('width', leftOffset);
     rightSpacer.setAttribute('x', rightOffset);
     rightSpacer.setAttribute('width', this.dimensions.offsetWidth - rightOffset);
+
+    this.renderDateLabel();
   }
 
   findOverallMaximumAndMinimum(maximum = 'maximum', minimum = 'minimum', start, end) {
@@ -1215,7 +1281,7 @@ class TelegramChart {
       tick.classList.add('chart__x-axis-end');
     }
 
-    tick.textContent = this.getDateLabel(this.xAxis[index]);
+    tick.textContent = this.getUTCDateLabel(this.xAxis[index]);
 
     return {
       element: tick,
@@ -1390,14 +1456,14 @@ class TelegramChart {
     };
   }
 
-  getDateLabel(time) {
+  getUTCDateLabel(time) {
     const date = new Date(time);
 
     if (this.zoomedIn) {
-      return `${getTrailingZeroes(date.getHours())}:${getTrailingZeroes(date.getMinutes())}`
+      return `${getTrailingZeroes(date.getUTCHours())}:${getTrailingZeroes(date.getUTCMinutes())}`
     }
 
-    return months[date.getMonth()].slice(0, 3) + ' ' + date.getDate();
+    return months[date.getUTCMonth()].slice(0, 3) + ' ' + date.getUTCDate();
   }
 
   getYLabel(value) {
@@ -1709,20 +1775,18 @@ class TelegramChart {
     }
   }
 
-  toggleLine(e, label, line) {
-    if (this.lines.filter(line => line.visible).length === 1 && line.visible) {
-      e.preventDefault();
+  setLine(label, line, enabled = false) {
+    line.visible = enabled;
 
-      return;
-    }
-
-    line.visible = !line.visible;
-
-    this.animate(line.opacity, line.visible ? 1 : 0);
-
-    label.classList.toggle('chart__toggle-check_disabled');
+    this.animate(line.opacity, enabled ? 1 : 0);
 
     this.findOffsetMaximumAndMinimum();
+
+    if (enabled) {
+      label.classList.remove('chart__toggle-check_disabled');
+    } else {
+      label.classList.add('chart__toggle-check_disabled');
+    }
 
     this.needOffsetRedraw = true;
     this.render();
@@ -1744,7 +1808,10 @@ class TelegramChart {
     const selectedElement = this.xAxis[this.selectedX];
 
     const week = new Date(selectedElement);
-    const label = `${weeks[week.getDay()].slice(0, 3)}, ${week.getDate()} ${months[week.getMonth()].slice(0, 3)} ${week.getFullYear()}`;
+    let label = `${weeks[week.getUTCDay()].slice(0, 3)}, ${week.getUTCDate()} ${months[week.getUTCMonth()].slice(0, 3)} ${week.getUTCFullYear()}`;
+    if (this.zoomedIn) {
+      label = `${getTrailingZeroes(week.getUTCHours())}:${getTrailingZeroes(week.getUTCMinutes())}`;
+    }
     const offset = this.chartPadding + (this.selectedX / (this.xAxis.length - 1) - this.offsetLeft) * this.dimensions.chartWidth * this.zoomRatio;
 
     this.infoViewport.setAttribute('transform', `translate(${offset}, 0)`);
@@ -1861,6 +1928,23 @@ class TelegramChart {
     this.renderInfo();
 
     this.needRedraw = true;
+  }
+
+  renderDateLabel() {
+    if (!this.dateLabel) {
+      return;
+    }
+
+    const left = Math.round(this.xAxis.length * this.offsetLeft);
+    const right = Math.round((this.xAxis.length - 1) * this.offsetRight);
+    const leftDate = new Date(this.xAxis[left]);
+    const rightDate = new Date(this.xAxis[right]);
+
+    if (rightDate - leftDate <= 60 * 60 * 24 * 1000) {
+      this.dateLabel.innerText = `${weeks[leftDate.getUTCDay()]}, ${leftDate.getUTCDate()} ${months[leftDate.getUTCMonth()]} ${leftDate.getFullYear()}`;
+    } else {
+      this.dateLabel.innerText = `${leftDate.getUTCDate()} ${months[leftDate.getUTCMonth()]} ${leftDate.getUTCFullYear()} - ${rightDate.getUTCDate()} ${months[rightDate.getUTCMonth()]} ${rightDate.getUTCFullYear()}`;
+    }
   }
 
   renderCanvas() {
