@@ -67,6 +67,60 @@ const getTrailingZeroes = value => {
   return value;
 };
 
+const createDrag = (x1, y1, x2, y2) => {
+  const r = 5;
+  const bx = 10;
+  const by = 1;
+  const dx = 4;
+  const dy = 14;
+  const dr = 1;
+  const mainRect = `
+    M${x2} ${y2 - r}
+    A${r} ${r} 90 0 1 ${x2 - r} ${y2}
+    L${x1 + r} ${y2}
+    A${r} ${r} 90 0 1 ${x1} ${y2 - r}
+    L${x1} ${y1 + r}
+    A${r} ${r} 90 0 1 ${x1 + r} ${y1}
+    L${x2 - r} ${y1}
+    A${r} ${r} 90 0 1 ${x2} ${y1 + r}
+    L${x2} ${y2 - r}
+    Z
+  `;
+
+  const hole = `
+    M${x1 + bx} ${y1 + by}
+    L${x1 + bx} ${y2 - by}
+    L${x2 - bx} ${y2 - by}
+    L${x2 - bx} ${y1 + by}
+    L${x1 + bx} ${y1 + by}
+    Z
+  `;
+
+  const leftDrag = `
+    M${x1 + dx + dr} ${y1 + dy}
+    A${dr} ${dr} 90 0 0 ${x1 + dx} ${y1 + dy + dr}
+    L${x1 + dx} ${y2 - dy - dr}
+    A${dr} ${dr} 90 0 0 ${x1 + dx + dr} ${y2 - dy}
+    A${dr} ${dr} 90 0 0 ${x1 + dx + 2 * dr} ${y2 - dy - dr}
+    L${x1 + dx + 2 * dr} ${y1 + dy + dr}
+    A${dr} ${dr} 90 0 0 ${x1 + dx + dr} ${y1 + dy}
+    Z
+  `;
+
+  const rightDrag = `
+    M${x2 - dx - 2 + dr} ${y1 + dy}
+    A${dr} ${dr} 90 0 0 ${x2 - dx - 2} ${y1 + dy + dr}
+    L${x2 - dx - 2} ${y2 - dy - dr}
+    A${dr} ${dr} 90 0 0 ${x2 - dx - 2 + dr} ${y2 - dy}
+    A${dr} ${dr} 90 0 0 ${x2 - dx - 2 + 2 * dr} ${y2 - dy - dr}
+    L${x2 - dx - 2 + 2 * dr} ${y1 + dy + dr}
+    A${dr} ${dr} 90 0 0 ${x2 - dx - 2 + dr} ${y1 + dy}
+    Z
+  `;
+
+  return mainRect + ' ' + hole + ' ' + leftDrag + ' ' + rightDrag;
+};
+
 const svgNS = 'http://www.w3.org/2000/svg';
 const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const weeks = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -75,7 +129,6 @@ class TelegramChart {
   constructor(selector, url = '', params = {name: 'Default chart'}) {
     this.container = createElement('div');
     this.container.classList.add('chart');
-    this.container.style.width = '100%';
     selector.appendChild(this.container);
 
     this.titleContainer = createElement('div');
@@ -150,7 +203,8 @@ class TelegramChart {
       values: {
         wrapper: null,
         values: new Map()
-      }
+      },
+      total: null
     };
 
     this.xTicks = new Map();
@@ -197,8 +251,6 @@ class TelegramChart {
 
         requestAnimationFrame(() => this.renderCanvas());
       });
-
-    console.log(this);
   }
 
   convertLineData(data = {names: [], colors: []}, line) {
@@ -422,40 +474,41 @@ class TelegramChart {
     };
 
     const touchStartEvent = e => {
-      if (e.path.includes(this.infoViewport)) {
+      if (e.composedPath && e.composedPath().includes(this.infoViewport)) {
         return;
       }
       e.stopPropagation();
+      const targetRect = this.viewport.getBoundingClientRect();
       if (this.chartType === 'circle') {
         const x = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
         const y = e.touches && e.touches.length ? e.touches[0].clientY : e.clientY;
-        const targetTop = e.target.getBoundingClientRect().top;
 
-        getSelectedRadian(x, y - targetTop);
+        getSelectedRadian(x - targetRect.left, y - targetRect.top);
         return;
       }
 
-      const x = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
+      const x = (e.touches && e.touches.length ? e.touches[0].clientX : e.clientX) - targetRect.left;
 
       getSelectedX(x);
     };
 
     const touchMoveEvent = e => {
       e.stopPropagation();
+      const targetRect = this.viewport.getBoundingClientRect();
       if (this.chartType === 'circle') {
         const x = e.changedTouches && e.changedTouches.length ? e.changedTouches[0].clientY : e.clientY;
         const y = e.changedTouches && e.changedTouches.length ? e.changedTouches[0].clientY : e.clientY;
 
-        getSelectedRadian(x, y);
+        getSelectedRadian(x - targetRect.left, y - targetRect.top);
         return;
       }
-      const x = e.changedTouches && e.changedTouches.length ? e.changedTouches[0].clientX : e.clientX;
+      const x = (e.changedTouches && e.changedTouches.length ? e.changedTouches[0].clientX : e.clientX) - targetRect.left;
 
       getSelectedX(x);
     };
 
     const removeSelectedX = e => {
-      if (e.path.includes(this.infoViewport)) {
+      if (e.composedPath && e.composedPath().includes(this.infoViewport)) {
         return;
       }
       if (this.selectedX >= 0) {
@@ -490,7 +543,7 @@ class TelegramChart {
       in: 'SourceGraphic',
       'flood-color': '#000000',
       'flood-opacity': '0.25',
-      stdDeviation: '1',
+      stdDeviation: '2',
       dx: '0',
       dy: '0.5',
       result: 'dropShadow'
@@ -549,43 +602,26 @@ class TelegramChart {
 
     this.offsetContext = this.offsetCanvas.getContext('2d');
 
-    this.offsetDrag.mainDrag = createElementNS('rect', {
-      fill: 'transparent',
-      height: this.dimensions.offsetHeight
-    });
-    this.offsetDrag.mainDrag.classList.add('chart__offset-main-drag');
-    this.offsetWrapper.appendChild(this.offsetDrag.mainDrag);
-
-    this.offsetDrag.leftDrag = createElementNS('rect', {
-      width: '3',
-      height: this.dimensions.offsetHeight
-    });
-    this.offsetDrag.leftDrag.classList.add('chart__offset-drag');
-    this.offsetDrag.leftDrag.classList.add('chart__offset-drag_left');
-    this.offsetWrapper.appendChild(this.offsetDrag.leftDrag);
-
-    this.offsetDrag.rightDrag = createElementNS('rect', {
-      width: '3',
-      height: this.dimensions.offsetHeight
-    });
-    this.offsetDrag.rightDrag.classList.add('chart__offset-drag');
-    this.offsetDrag.rightDrag.classList.add('chart__offset-drag_right');
-    this.offsetWrapper.appendChild(this.offsetDrag.rightDrag);
-
     this.offsetDrag.leftSpacer = createElementNS('rect', {
-      x: '0',
-      height: this.dimensions.offsetHeight
+      x: 0,
+      y: 1,
+      height: this.dimensions.offsetHeight - 2
     });
     this.offsetDrag.leftSpacer.classList.add('chart__offset-spacer');
     this.offsetDrag.leftSpacer.classList.add('chart__offset-spacer_left');
     this.offsetWrapper.appendChild(this.offsetDrag.leftSpacer);
 
     this.offsetDrag.rightSpacer = createElementNS('rect', {
-      height: this.dimensions.offsetHeight
+      y: 1,
+      height: this.dimensions.offsetHeight - 2
     });
     this.offsetDrag.rightSpacer.classList.add('chart__offset-spacer');
     this.offsetDrag.rightSpacer.classList.add('chart__offset-spacer_right');
     this.offsetWrapper.appendChild(this.offsetDrag.rightSpacer);
+
+    this.offsetDrag.mainDrag = createElementNS('path');
+    this.offsetDrag.mainDrag.classList.add('chart__offset-main-drag');
+    this.offsetWrapper.appendChild(this.offsetDrag.mainDrag);
 
     this.attachMouseEvents();
   }
@@ -600,14 +636,15 @@ class TelegramChart {
 
     const mouseDownHandler = e => {
       this.selectedX = -1;
-      const x = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
+      const targetRect = this.offsetWrapper.getBoundingClientRect();
+      const x = (e.touches && e.touches.length ? e.touches[0].clientX : e.clientX) - targetRect.left;
 
-      if ((x >= this.chartPadding + this.offsetLeft * this.dimensions.offsetWidth - safetyZone) && (x < this.chartPadding + this.offsetRight * this.dimensions.offsetWidth - safetyZone)) {
+      if ((x >= this.offsetLeft * this.dimensions.offsetWidth - safetyZone) && (x < this.offsetRight * this.dimensions.offsetWidth - safetyZone)) {
         e.stopPropagation();
         leftDragging = true;
         leftCoordinate = x - this.offsetLeft * this.dimensions.offsetWidth;
       }
-      if ((x > this.chartPadding + this.offsetLeft * this.dimensions.offsetWidth + safetyZone) && (x <= this.chartPadding + this.offsetRight * this.dimensions.offsetWidth + safetyZone)) {
+      if ((x > this.offsetLeft * this.dimensions.offsetWidth + safetyZone) && (x <= this.offsetRight * this.dimensions.offsetWidth + safetyZone)) {
         e.stopPropagation();
         rightDragging = true;
         rightCoordinate = x - this.offsetRight * this.dimensions.offsetWidth;
@@ -627,7 +664,8 @@ class TelegramChart {
           return;
         }
 
-        const x = e.changedTouches && e.changedTouches.length ? e.changedTouches[0].clientX : e.clientX;
+        const targetRect = this.offsetWrapper.getBoundingClientRect();
+        const x = (e.changedTouches && e.changedTouches.length ? e.changedTouches[0].clientX : e.clientX) - targetRect.left;
 
         if (leftDragging) {
           let newLeft = x - leftCoordinate;
@@ -887,8 +925,6 @@ class TelegramChart {
       const dataset = new Date(this.xAxis[this.selectedX]);
       const dataString = `${dataset.getUTCFullYear()}-${getTrailingZeroes(dataset.getUTCMonth() + 1)}`;
 
-      console.log('click', dataString);
-
       if (this.chartType === 'areas') {
         this.zoomedIn = true;
         this.container.classList.add('chart_zoomed-in');
@@ -921,8 +957,6 @@ class TelegramChart {
         this.setAnimation(this.offsetRightAnimation, this.offsetRight);
 
         this.offsetStepLimit = 1 / 7;
-        // this.offsetLeft = this.offsetStepLimit * (this.selectedX - leftDays);
-        // this.offsetRight = this.offsetStepLimit * (rightDays - this.selectedX);
         this.offsetLeft = this.offsetStepLimit * 3;
         this.offsetRight = this.offsetStepLimit * 4;
 
@@ -938,7 +972,6 @@ class TelegramChart {
 
       this.getData(`${this.url}/${dataString}/${getTrailingZeroes(dataset.getUTCDate())}.json`)
         .then(data => {
-          console.log(data);
           this.zoomedIn = true;
           this.container.classList.add('chart_zoomed-in');
           this.initializeChartData(data);
@@ -982,7 +1015,7 @@ class TelegramChart {
       return;
     }
 
-    const {mainDrag, leftDrag, rightDrag, leftSpacer, rightSpacer} = this.offsetDrag;
+    const {mainDrag, leftSpacer, rightSpacer} = this.offsetDrag;
 
     let offsetLeft = this.offsetLeft;
     let offsetRight = this.offsetRight;
@@ -997,22 +1030,18 @@ class TelegramChart {
 
     const leftOffset = this.dimensions.offsetWidth * offsetLeft;
     const rightOffset = this.dimensions.offsetWidth * offsetRight;
-    const width = rightOffset - leftOffset;
 
-    leftDrag.setAttribute('x', leftOffset);
-    mainDrag.setAttribute('x', leftOffset);
-    mainDrag.setAttribute('width', width);
-    rightDrag.setAttribute('x', rightOffset - 3);
-    leftSpacer.setAttribute('width', leftOffset);
-    rightSpacer.setAttribute('x', rightOffset);
-    rightSpacer.setAttribute('width', this.dimensions.offsetWidth - rightOffset);
+    mainDrag.setAttribute('d', createDrag(leftOffset, 0, rightOffset, this.dimensions.offsetHeight, 10));
+    leftSpacer.setAttribute('width', leftOffset + 10);
+    rightSpacer.setAttribute('x', rightOffset - 10);
+    rightSpacer.setAttribute('width', this.dimensions.offsetWidth - rightOffset + 10);
 
     this.renderDateLabel();
   }
 
   findOverallMaximumAndMinimum(maximum = 'maximum', minimum = 'minimum', start, end) {
     if (this.percentage) {
-      this.setAnimation(this[maximum], 100);
+      this.setAnimation(this[maximum], 105);
       this.setAnimation(this[minimum], 0);
 
       return;
@@ -1153,7 +1182,7 @@ class TelegramChart {
       chartWidth: ((this.params.width || this.container.clientWidth) - this.chartPadding * 2) * this.pixelRatio,
       chartPadding: this.chartPadding * this.pixelRatio,
       offsetWidth: (this.params.width || this.container.clientWidth) - this.chartPadding * 2,
-      offsetHeight: 38
+      offsetHeight: 42
     };
 
     if (this.xAxis && this.xAxis.length) {
@@ -1183,7 +1212,7 @@ class TelegramChart {
     this.offsetAbsoluteViewport.setAttribute('width', this.dimensions.offsetWidth);
     this.offsetAbsoluteViewport.setAttribute('height', this.dimensions.offsetHeight);
     this.offsetCanvas.setAttribute('width', this.dimensions.offsetWidth);
-    this.offsetCanvas.setAttribute('height', this.dimensions.offsetHeight);
+    this.offsetCanvas.setAttribute('height', this.dimensions.offsetHeight - 2);
   }
 
   setYAxisLengths() {
@@ -1191,11 +1220,13 @@ class TelegramChart {
       return;
     }
 
-    const lines = this.yAxisViewport.querySelectorAll('line');
+    for (let [index, tick] of this.yTicks) {
+      tick.line.setAttribute('x2', this.dimensions.chartWidth + this.chartPadding);
 
-    lines.forEach(line => {
-      line.setAttribute('x2', this.dimensions.chartWidth + this.chartPadding);
-    })
+      if (tick.values.length > 1) {
+        tick.values[1].setAttribute('x', this.dimensions.chartWidth + this.chartPadding);
+      }
+    }
   }
 
   renderCanvasXTicks() {
@@ -1456,6 +1487,7 @@ class TelegramChart {
     return {
       element: tick,
       values: valueLabels,
+      line: tickLine,
       opacity: this.createAnimation(1)
     };
   }
@@ -1472,14 +1504,6 @@ class TelegramChart {
 
   getYLabel(value) {
     return value;
-
-    // if (value / 1000000 ^ 0 > 0) {
-    //   return (value / 1000000 ^ 0) + 'M'
-    // } else if (value / 1000 ^ 0 > 0) {
-    //   return (value / 1000 ^ 0) + 'k'
-    // } else {
-    //   return value;
-    // }
   }
 
   renderCanvasCircle() {
@@ -1709,6 +1733,7 @@ class TelegramChart {
       context.fillStyle = line.color;
 
       const maximums = new Array(right - left);
+      const maximumOffset = context === this.context ? 13 : 0;
 
       if (this.percentage) {
         for (let i = left; i < right; i++) {
@@ -1740,8 +1765,8 @@ class TelegramChart {
         let h = ((maximum - bottom) / (maximum - minimum) * height) - y;
 
         if (this.percentage) {
-          y = (maximums[i] - value) / maximums[i] * height;
-          h = ((maximums[i] - bottom) / maximums[i] * height) - y;
+          y = maximumOffset + (maximums[i] - value) / maximums[i] * (height - maximumOffset);
+          h = maximumOffset + ((maximums[i] - bottom) / maximums[i] * (height - maximumOffset)) - y;
         }
 
         if (i === left) {
@@ -1768,7 +1793,7 @@ class TelegramChart {
         let h = ((maximum - bottom) / (maximum - minimum) * height);
 
         if (this.percentage) {
-          h = (maximums[i] - bottom) / maximums[i] * height;
+          h = maximumOffset + (maximums[i] - bottom) / maximums[i] * (height - maximumOffset);
         }
 
         context.lineTo(x, h);
@@ -1833,11 +1858,22 @@ class TelegramChart {
     }
 
     let lineHeight = 0;
+    let maximumPercent = 0;
+
+    if (this.percentage || this.stacked) {
+      this.lines.forEach(line => {
+        if (!line.visible) return;
+
+        maximumPercent += line.data[this.selectedX]
+      });
+    }
 
     this.lines
       .forEach((line, index) => {
         if (!values.has(line.id)) {
           const elem = createElementNS('text');
+          const percent = createElementNS('tspan');
+          percent.classList.add('chart__info-percent');
           const label = createElementNS('tspan');
           label.classList.add('chart__info-label');
           label.textContent = line.name;
@@ -1845,8 +1881,9 @@ class TelegramChart {
             fill: line.color
           });
           value.classList.add('chart__info-value');
-          elem.appendChild(value);
+          elem.appendChild(percent);
           elem.appendChild(label);
+          elem.appendChild(value);
 
           values.set(line.id, elem);
 
@@ -1890,15 +1927,26 @@ class TelegramChart {
         const currentIndex = index + invisibleItems;
         const value = elem.querySelector('.chart__info-value');
         const label = elem.querySelector('.chart__info-label');
+        const percent = elem.querySelector('.chart__info-percent');
 
-        if (!value || !label) {
+        if (!value || !label || !percent) {
           return line.data[this.selectedX];
         }
 
+        if (this.percentage) {
+          percent.style.display = 'block';
+          percent.setAttribute('x', 12 + 'px');
+          percent.setAttribute('y', (40 + 20 * currentIndex) + 'px');
+          percent.textContent = Math.round(line.data[this.selectedX] / maximumPercent * 100) + '%';
+          label.setAttribute('x', 25 + 'px');
+        } else {
+          percent.style.display = 'none';
+          label.setAttribute('x', -12 + 'px');
+        }
+
+        label.setAttribute('y', (40 + 20 * currentIndex) + 'px');
         value.setAttribute('x', 123 + 'px');
         value.setAttribute('y', (40 + 20 * currentIndex) + 'px');
-        label.setAttribute('y', (40 + 20 * currentIndex) + 'px');
-        label.setAttribute('x', -13 + 'px');
 
         if (value.textContent !== String(line.data[this.selectedX])) {
           value.textContent = line.data[this.selectedX];
@@ -1911,12 +1959,41 @@ class TelegramChart {
       weekLabel.textContent = label;
     }
 
+    if (this.stacked && !this.percentage) {
+      if (!this.infoData.total) {
+        this.infoData.total = createElementNS('text');
+        const label = createElementNS('tspan');
+        label.classList.add('chart__info-label');
+        label.textContent = maximumPercent;
+        const value = createElementNS('tspan');
+        value.classList.add('chart__info-value');
+        this.infoData.total.appendChild(label);
+        this.infoData.total.appendChild(value);
+
+        valuesG.appendChild(this.infoData.total);
+      }
+
+      this.infoData.total.style.display = 'block';
+
+      const value = this.infoData.total.querySelector('.chart__info-value');
+      const label = this.infoData.total.querySelector('.chart__info-label');
+      const currentIndex = this.lines.length + invisibleItems;
+
+      label.setAttribute('x', -12 + 'px');
+      label.setAttribute('y', (40 + 20 * currentIndex) + 'px');
+      value.setAttribute('x', 123 + 'px');
+      value.setAttribute('y', (40 + 20 * currentIndex) + 'px');
+
+      label.textContent = 'All';
+      value.textContent = maximumPercent;
+    } else if (this.infoData.total) {
+      this.infoData.total.style.display = 'none';
+    }
+
     const weekBB = weekLabel.getBBox();
     const labelsBB = valuesG.getBBox();
 
-    // const infoRectWidth = Math.round(Math.max(weekBB.width, labelsBB.width) + 20);
-    // const infoRectHeight = Math.round(weekBB.height + labelsBB.height + 25);
-    const infoRectWidth = 160;
+    const infoRectWidth = Math.round(Math.max(weekBB.width, labelsBB.width) + 24);
     const infoRectHeight = Math.round(weekBB.height + labelsBB.height + 16 );
     const xRect = -143;
 

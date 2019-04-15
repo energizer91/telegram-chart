@@ -22,10 +22,15 @@ body {
 
 .charts {
     width: 100%;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 .chart {
     margin-bottom: 60px;
+    width: 33.333%;
 }
 
 .chart__title-container {
@@ -99,7 +104,7 @@ body {
 
 .chart__offset-absolute-viewport canvas {
     position: absolute;
-    top: 0;
+    top: 1px;
     left: 0;
 }
 
@@ -108,7 +113,7 @@ body {
 }
 
 .chart__offset-wrapper {
-    height: 38px;
+    height: 42px;
     position: relative;
     width: 100%;
     -webkit-user-select: none;
@@ -137,32 +142,32 @@ body {
     transform-origin: left bottom;
 }
 
-.chart__offset-main-drag, .chart__offset-spacer {
-    height: 100%;
-}
-
 .chart__offset-main-drag {
     height: 100%;
-    stroke: rgb(192,209,225);
+    fill: rgb(192,209,225);
+    fill-rule: nonzero;
     stroke-width: 1px;
-    transition: stroke 0.3s;
+    transition: fill 0.3s;
     cursor: grabbing;
 }
 
 .chart__offset-drag {
-    width: 3px;
-    height: 38px;
+    width: 10px;
+    height: 42px;
     fill: rgb(192,209,225);
     transition: fill 0.3s;
     cursor: ew-resize;
+    fill-rule: evenodd;
 }
 
 .chart__offset-drag_left {
     cursor: w-resize;
+    border-radius: 5px 0 0 5px;
 }
 
 .chart__offset-drag_right {
     cursor: e-resize;
+    border-radius: 0 5px 5px 0;
 }
 
 .chart__offset-spacer {
@@ -239,6 +244,12 @@ body {
     font-weight: 400;
 }
 
+.chart__info-percent {
+    font-size: 13px;
+    font-weight: 600;
+    text-anchor: end;
+}
+
 @keyframes showing {
     0% {
         opacity: 0
@@ -285,6 +296,10 @@ body {
     margin-top: 10px;
     cursor: pointer;
     transition: border-color 0.3s, color 0.3s, background-color 0.3s;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .chart__toggle-check input {
@@ -380,8 +395,17 @@ body.night .chart__info-rect {
     fill: #253241;
 }
 
+body.night .chart__info-label {
+    fill: white;
+}
+
+body.night .chart__info-percent {
+    fill: white;
+}
+
+
 body.night .chart__offset-main-drag {
-    stroke: #56626D;
+    fill: #56626D;
 }
 
 body.night .chart__offset-drag {
@@ -394,4 +418,16 @@ body.night .chart__offset-spacer {
 
 body.night .chart__toggle-check-icon:after {
     background-color: #242F3E;
+}
+
+@media screen and (max-width: 768px) {
+    .chart {
+        width: 100%;
+    }
+}
+
+@media screen and (min-width: 769px) and (max-width: 1200px) {
+    .chart {
+        width: 50%;
+    }
 }
