@@ -16,7 +16,6 @@ function tickIncrement(start, stop, count) {
 }
 
 const DURATION = 300;
-const ONE_DAY = 60 * 60 * 24 * 1000;
 
 // for creating svg elements
 const createElementNS = (tag, attrs = {}) => {
@@ -355,6 +354,9 @@ class TelegramChart {
     };
 
     const touchStartEvent = e => {
+      if (e.target === this.infoData.xInfoRect) {
+        return;
+      }
       e.stopPropagation();
       const x = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
 
@@ -721,15 +723,10 @@ class TelegramChart {
 
     this.viewport.appendChild(this.infoViewport);
 
-    this.infoViewport.addEventListener('mousedown', e => e.stopPropagation());
-    this.infoViewport.addEventListener('mouseup', e => e.stopPropagation());
-    this.infoViewport.addEventListener('touchstart', e => e.stopPropagation());
-    this.infoViewport.addEventListener('touchend', e => e.stopPropagation());
-
     this.infoViewport.addEventListener('click', e => {
       e.stopPropagation();
 
-      if (!this.selectedX) {
+      if (this.selectedX < 0) {
         return;
       }
 
@@ -1746,13 +1743,12 @@ class TelegramChart {
     // const infoRectHeight = Math.round(weekBB.height + labelsBB.height + 25);
     const infoRectWidth = 160;
     const infoRectHeight = Math.round(weekBB.height + labelsBB.height + 16 );
+    const xRect = -143;
 
-    if (offset + infoRectWidth > this.dimensions.chartWidth + this.chartPadding * 3 + 5) {
-      xInfoG.setAttribute('transform', `translate(${-offset + this.dimensions.chartWidth - infoRectWidth + this.chartPadding * 3 + 5}, 0)`);
-    } else if (offset - this.chartPadding * 3 - 5 < 0) {
-      xInfoG.setAttribute('transform', `translate(${-offset + this.chartPadding * 3 + 5}, 0)`);
-    } else {
-      xInfoG.removeAttribute('transform');
+    xInfoG.setAttribute('transform', `translate(${xRect}, 0)`);
+
+    if (offset - this.chartPadding * 3 - 5 + xRect < 0) {
+      xInfoG.setAttribute('transform', `translate(${this.chartPadding * 3 + 5}, 0)`);
     }
 
     xInfoRect.setAttribute('width', infoRectWidth + 'px');
