@@ -51,6 +51,8 @@ body {
 
 .chart__zoom-out-label {
     display: none;
+    color: #3C8BDC;
+    font-weight: 500;
 }
 
 .chart_zoomed-in .chart__title {
