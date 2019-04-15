@@ -45,6 +45,20 @@ const createElement = (tag, attrs = {}) => {
 
 const ease = CubicBezier(0.25, 0.1, 0.25, 1.0);
 
+const getAngle = (x1, y1, x2, y2, x3, y3) => {
+  const A = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+  const B = Math.sqrt((x3 - x1) ** 2 + (y3 - y1) ** 2);
+  const C = Math.sqrt((x3 - x2) ** 2 + (y3 - y2) ** 2);
+
+  const angle = Math.acos((B ** 2 + C ** 2 - A ** 2) / (2 * B * C))
+
+  if (y2 < y3) {
+    return 2 * Math.PI - angle;
+  }
+
+  return angle;
+};
+
 const getTrailingZeroes = value => {
   if (value / 10 < 1) {
     return '0' + value;
@@ -330,6 +344,52 @@ class TelegramChart {
 
     this.context = this.canvas.getContext('2d');
 
+    const getSelectedRadian = (x, y) => {
+      const centerX = this.dimensions.chartWidth / 2;
+      const centerY = this.dimensions.chartHeight / 2;
+      const radius = this.dimensions.chartHeight / 2;
+
+      const left = Math.floor(this.offsetLeftAnimation.to * this.xAxis.length);
+      const right = Math.ceil(this.offsetRightAnimation.to * this.xAxis.length);
+
+      let total = 0;
+      const values = new Array(this.lines.length);
+
+      for (let i = 0; i < this.lines.length; i++) {
+        if (!this.lines[i].opacity.value) continue;
+        for (let j = left; j < right; j++) {
+          if (!values[i]) {
+            values[i] = 0;
+          }
+          values[i] += this.lines[i].data[j] * this.lines[i].opacity.value;
+        }
+        total += values[i];
+      }
+
+      let start = 0;
+
+      for (let i = 0; i < this.lines.length; i++) {
+        if (!this.lines[i].opacity.value) continue;
+
+        const phi = start + values[i] / total * 2 * Math.PI;
+        const selectedAngle = getAngle(centerX + radius, centerY, x, y, centerX, centerY);
+
+        if (selectedAngle >= start && selectedAngle <= phi) {
+          if (this.selectedX !== i) {
+            this.setAnimation(this.selectedAnimation, 0);
+          }
+          this.animate(this.selectedAnimation, 1);
+          this.selectedX = i;
+
+          break;
+        }
+
+        start = phi;
+      }
+
+      this.renderInfo();
+    };
+
     const getSelectedX = x => {
       const selectedX = Math.floor((this.offsetLeft + x / (this.dimensions.chartPadding + this.dimensions.chartWidth) * (this.offsetRight - this.offsetLeft)) * (this.xAxis.length - 1));
 
@@ -354,10 +414,19 @@ class TelegramChart {
     };
 
     const touchStartEvent = e => {
-      if (e.target === this.infoData.xInfoRect) {
+      if (e.path.includes(this.infoViewport)) {
         return;
       }
       e.stopPropagation();
+      if (this.chartType === 'circle') {
+        const x = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
+        const y = e.touches && e.touches.length ? e.touches[0].clientY : e.clientY;
+        const targetTop = e.target.getBoundingClientRect().top;
+
+        getSelectedRadian(x, y - targetTop);
+        return;
+      }
+
       const x = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
 
       getSelectedX(x);
@@ -365,12 +434,22 @@ class TelegramChart {
 
     const touchMoveEvent = e => {
       e.stopPropagation();
+      if (this.chartType === 'circle') {
+        const x = e.changedTouches && e.changedTouches.length ? e.changedTouches[0].clientY : e.clientY;
+        const y = e.changedTouches && e.changedTouches.length ? e.changedTouches[0].clientY : e.clientY;
+
+        getSelectedRadian(x, y);
+        return;
+      }
       const x = e.changedTouches && e.changedTouches.length ? e.changedTouches[0].clientX : e.clientX;
 
       getSelectedX(x);
     };
 
-    const removeSelectedX = () => {
+    const removeSelectedX = e => {
+      if (e.path.includes(this.infoViewport)) {
+        return;
+      }
       if (this.selectedX >= 0) {
         this.needRedraw = true;
       }
@@ -378,15 +457,18 @@ class TelegramChart {
       this.animate(this.selectedAnimation, 0);
 
       if (this.infoViewport) {
-        this.infoViewport.style.opacity = '0';
+        this.infoViewport.style.display = 'none';
       }
     };
 
-    this.viewport.addEventListener('mousemove', e => touchStartEvent(e));
-    this.viewport.addEventListener('touchstart', e => touchStartEvent(e));
-    this.viewport.addEventListener('touchmove', e => touchMoveEvent(e));
-
-    document.addEventListener('mousemove', () => removeSelectedX());
+    if ('ontouchstart' in window) {
+      this.viewport.addEventListener('touchstart', e => touchStartEvent(e));
+      this.viewport.addEventListener('touchmove', e => touchMoveEvent(e));
+      document.addEventListener('touchstart', e => removeSelectedX(e));
+    } else {
+      this.viewport.addEventListener('mousemove', e => touchStartEvent(e));
+      document.addEventListener('mousemove', e => removeSelectedX(e));
+    }
   }
 
   createDefs() {
@@ -813,7 +895,18 @@ class TelegramChart {
 
           this.render();
         })
-    })
+    }, {capture: true})
+  }
+
+  createCircleInfo() {
+    if (this.circleInfoViewport) {
+      return;
+    }
+
+    this.circleInfoViewport = createElementNS('g');
+    this.circleInfoViewport.classList.add('chart__circle-info-viewport');
+
+
   }
 
   renderOffsets() {
@@ -1193,7 +1286,7 @@ class TelegramChart {
     const shouldAnimate = this.yTicks.size !== 0;
 
     for (let [index, tick] of this.yTicks) {
-      if (this.yTicks.size && (index % yTickInterval !== 0) || maximum === -Infinity || maximum === 0) {
+      if (this.yTicks.size && (index % (minimum + yTickInterval) !== 0) || maximum === -Infinity || maximum === 0) {
         this.animate(tick.opacity, 0);
       }
     }
@@ -1361,16 +1454,23 @@ class TelegramChart {
       if (left !== prevLeft || right !== prevRight) {
         let p = (this.offsetLeftAnimation.result + this.offsetRightAnimation.result) / 2;
 
-        // if (p === 1) {
-        //   p = this.offsetRightAnimation.result;
-        // }
-
         phi = start + (prevValues[i] - (prevValues[i] - values[i]) * p) / (prevTotal - (prevTotal - total) * p) * 2 * Math.PI;
       }
 
-      this.context.moveTo(centerX, centerY);
-      this.context.arc(centerX, centerY, radius, start, phi);
-      this.context.lineTo(centerX, centerY);
+      if (this.selectedX >= 0 && i === this.selectedX) {
+        const offsetPhi = (phi + start) / 2;
+        const offsetX = this.selectedAnimation.value * 10 * Math.cos(offsetPhi);
+        const offsetY = this.selectedAnimation.value * 10 * Math.sin(offsetPhi);
+
+        this.context.moveTo(centerX + offsetX, centerY + offsetY);
+        this.context.arc(centerX + offsetX, centerY + offsetY, radius, start, phi);
+        this.context.lineTo(centerX + offsetX, centerY + offsetY);
+      } else {
+        this.context.moveTo(centerX, centerY);
+        this.context.arc(centerX, centerY, radius, start, phi);
+        this.context.lineTo(centerX, centerY);
+      }
+
       this.context.closePath();
       this.context.fill();
 
@@ -1631,13 +1731,13 @@ class TelegramChart {
   renderInfo() {
     if (this.selectedX < 0 || this.selectedX >= this.xAxis.length || this.maximum.to === -Infinity) {
       if (this.infoViewport) {
-        this.infoViewport.style.opacity = '0';
+        this.infoViewport.style.display = 'none';
       }
 
       return;
     }
 
-    this.infoViewport.style.opacity = '1';
+    this.infoViewport.style.display = 'block';
 
     const {weekLabel, values: {wrapper: valuesG, values}, xInfoRect, xInfoG, circles, xLine} = this.infoData;
 
