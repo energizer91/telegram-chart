@@ -1938,7 +1938,7 @@ class TelegramChart {
           percent.setAttribute('x', 12 + 'px');
           percent.setAttribute('y', (40 + 20 * currentIndex) + 'px');
           percent.textContent = Math.round(line.data[this.selectedX] / maximumPercent * 100) + '%';
-          label.setAttribute('x', 25 + 'px');
+          label.setAttribute('x', 18 + 'px');
         } else {
           percent.style.display = 'none';
           label.setAttribute('x', -12 + 'px');
