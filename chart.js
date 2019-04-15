@@ -723,8 +723,10 @@ class TelegramChart {
 
       label.classList.add('chart__toggle-check');
       text.innerText = line.name;
-      icon.style.backgroundColor = line.color;
       icon.classList.add('chart__toggle-check-icon');
+      label.style.borderColor = line.color;
+      label.style.backgroundColor = line.color;
+      label.style.color = 'white';
 
       checkboxes.push(label);
 
@@ -742,11 +744,7 @@ class TelegramChart {
           return;
         }
 
-        if (line.visible) {
-          this.setLine(label, line, false);
-        } else {
-          this.setLine(label, line, true);
-        }
+        this.setLine(label, line, !line.visible);
       };
 
       const longTapStart = e => {
@@ -1790,8 +1788,12 @@ class TelegramChart {
 
     if (enabled) {
       label.classList.remove('chart__toggle-check_disabled');
+      label.style.color = 'white';
+      label.style.backgroundColor = line.color;
     } else {
       label.classList.add('chart__toggle-check_disabled');
+      label.style.backgroundColor = 'initial';
+      label.style.color = line.color;
     }
 
     this.needOffsetRedraw = true;

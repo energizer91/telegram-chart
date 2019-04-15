@@ -268,14 +268,14 @@ body {
 
 .chart__checks {
     margin-top: 5px;
-    color: #43484B;
 }
 
 .chart__toggle-check {
     display: inline-block;
     padding: 7px 14px 7px 8px;
     box-sizing: border-box;
-    border: 1px solid #ECF0F3;
+    border-width: 2px;
+    border-style: solid;
     border-radius: 18px;
     height: 36px;
     vertical-align: middle;
@@ -284,7 +284,7 @@ body {
     margin-right: 10px;
     margin-top: 10px;
     cursor: pointer;
-    transition: border-color 0.3s, color 0.3s;
+    transition: border-color 0.3s, color 0.3s, background-color 0.3s;
 }
 
 .chart__toggle-check input {
@@ -292,9 +292,10 @@ body {
 }
 
 .chart__toggle-check span {
-    margin-left: 10px;
     vertical-align: middle;
     display: inline-block;
+    transition: transform 0.3s;
+    font-weight: 500;
 }
 
 .chart__toggle-check-icon {
@@ -302,14 +303,13 @@ body {
     height: 20px;
     width: 20px;
     position: relative;
-    border-radius: 10px;
     vertical-align: middle;
 }
 
-.chart__toggle-check-icon:before, .chart__toggle-check-icon:after {
+.chart__toggle-check-icon:before {
     content: '';
     position: absolute;
-    transition: transform 0.3s;
+    transition: opacity 0.3s;
     background-position: center;
     background-repeat: no-repeat;
     background-size: cover;
@@ -323,22 +323,12 @@ body {
     background-image: url('check.svg');
 }
 
-.chart__toggle-check-icon:after {
-    left: 2px;
-    top: 2px;
-    width: 16px;
-    height: 16px;
-    background-color: white;
-    border-radius: 14px;
-    transform: scale(0);
-    transition: transform 0.3s, background-color 0.3s;
+.chart__toggle-check_disabled .chart__toggle-check-icon:before {
+    opacity: 0;
 }
 
-.chart__toggle-check_disabled .chart__toggle-check-icon:before {
-    transform: scale(0);
-}
-.chart__toggle-check_disabled .chart__toggle-check-icon:after {
-    transform: scale(1);
+.chart__toggle-check_disabled span {
+    transform: translateX(-8px);
 }
 
 .night-button {
@@ -388,14 +378,6 @@ body.night .chart__info-week {
 
 body.night .chart__info-rect {
     fill: #253241;
-}
-
-body.night .chart__checks {
-    color: #E8ECEE;
-}
-
-body.night .chart__toggle-check {
-    border-color: #344658;
 }
 
 body.night .chart__offset-main-drag {
