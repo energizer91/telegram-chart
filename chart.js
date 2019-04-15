@@ -517,6 +517,12 @@ class TelegramChart {
 
   createOffsetWrapper() {
     if (this.offsetContainer) {
+      if (this.params.zoomOverview && this.zoomedIn) {
+        this.offsetAbsoluteViewport.style.display = 'none';
+      } else {
+        this.offsetAbsoluteViewport.style.display = 'block';
+      }
+
       return;
     }
 
